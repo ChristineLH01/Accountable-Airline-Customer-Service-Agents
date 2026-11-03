@@ -1,7 +1,7 @@
 import pytest
 
 from tau2.data_model.message import AssistantMessage, UserMessage
-from tau2.user.user_simulator import DummyUser, UserSimulator
+from tau2.user.user_simulator import UserSimulator
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def first_agent_message() -> AssistantMessage:
 
 @pytest.fixture
 def user_simulator(user_instructions: str) -> UserSimulator:
-    return UserSimulator(llm="gpt-4o-mini", instructions=user_instructions)
+    return UserSimulator(llm="openai/gpt-6.1-sol", instructions=user_instructions)
 
 
 @pytest.mark.live_api
@@ -58,10 +58,3 @@ def test_user_simulator_set_state(
             ),
         ]
     )
-
-
-def test_dummy_user_no_args():
-    """DummyUser must be instantiable without arguments (solo-mode gym path)."""
-    dummy = DummyUser()
-    state = dummy.get_init_state()
-    assert state.messages == []

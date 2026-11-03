@@ -103,7 +103,7 @@ class ReActAgent(HalfDuplexAgent[ReActAgentState]):
         self,
         tools: list[Tool],
         domain_policy: str,
-        llm: str = "openai/gpt-4.1-mini",
+        llm: str = "openai/gpt-6.1-sol",
         llm_args: Optional[dict] = None,
     ):
         super().__init__(tools=tools, domain_policy=domain_policy)
@@ -196,7 +196,7 @@ def create_react_agent(tools, domain_policy, **kwargs):
     return ReActAgent(
         tools=tools,
         domain_policy=domain_policy,
-        llm=kwargs.get("llm", "openai/gpt-4.1-mini"),
+        llm=kwargs.get("llm", "openai/gpt-6.1-sol"),
         llm_args=kwargs.get("llm_args"),
     )
 
@@ -206,20 +206,20 @@ def create_react_agent(tools, domain_policy, **kwargs):
 # =============================================================================
 
 if __name__ == "__main__":
-    from tau2.data_model.simulation import TextRunConfig
+    from tau2.data_model.simulation import RunConfig
     from tau2.registry import registry
     from tau2.runner import get_tasks, run_single_task
 
     # Register the ReAct agent
     registry.register_agent_factory(create_react_agent, "react_agent")
 
-    # Run on a mock task
-    tasks = get_tasks("mock", task_ids=["create_task_1"])
+    # Run on an airline task
+    tasks = get_tasks("airline", task_ids=["0"])
     result = run_single_task(
-        TextRunConfig(
-            domain="mock",
+        RunConfig(
+            domain="airline",
             agent="react_agent",
-            llm_agent="openai/gpt-4.1-mini",
+            llm_agent="openai/gpt-6.1-sol",
         ),
         tasks[0],
         seed=42,

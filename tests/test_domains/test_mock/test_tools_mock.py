@@ -1,9 +1,9 @@
 import pytest
+from mock_domain.data_model import MockDB, Task, User
+from mock_domain.environment import get_environment
 
 from tau2.data_model.message import ToolCall
 from tau2.data_model.tasks import EnvAssertion, EnvFunctionCall
-from tau2.domains.mock.data_model import MockDB, Task, User
-from tau2.domains.mock.environment import get_environment
 from tau2.environment.environment import Environment
 
 

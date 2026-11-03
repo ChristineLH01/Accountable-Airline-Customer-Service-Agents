@@ -247,15 +247,15 @@ class RewardType(str, Enum):
       result of replaying `EvaluationCriteria.actions` on a fresh env;
       any agent path producing an equivalent end state passes.
     - ENV_ASSERTION: all `env_assertions` pass on the predicted env.
-    - COMMUNICATE: every `communicate_info` string appears (substring)
-      in the agent's messages.
+    - COMMUNICATE: every `communicate_info` fact was conveyed by the agent,
+      as judged by the semantic LLM judge (or by substring match with
+      `--communicate-scorer substring`).
     - NL_ASSERTION: every `nl_assertions` entry is judged true by an
       LLM (experimental / WIP).
     - ACTION: every entry in `actions` is matched by an agent tool call
       (per `Action.compare_with_tool_call`). The only reward type that
       makes the action list a hard requirement — promotes it to the
-      assumed-unique correct trajectory. Used in a few
-      `banking_knowledge` tasks; not used in airline/retail/telecom.
+      assumed-unique correct trajectory. Not used by the airline tasks.
 
     See `docs/evaluation.md`.
     """
@@ -404,8 +404,9 @@ class EvaluationCriteria(BaseModel):
         Optional[list[str]],
         Field(
             description=(
-                "Strings the agent must say to the user (substring "
-                "match). Gates the reward only when "
+                "Facts the agent must convey to the user (scored by the "
+                "semantic LLM judge, or by substring match on request). "
+                "Gates the reward only when "
                 "`RewardType.COMMUNICATE` is in `reward_basis`."
             ),
             default=None,
@@ -576,13 +577,6 @@ class Task(BaseModel):
             description="User scenario. This information will be sent to the user simulator."
         ),
     ]
-    ticket: Annotated[
-        Optional[str],
-        Field(
-            description="Task in ticket format for solo agent solving.",
-            default=None,
-        ),
-    ]
     initial_state: Annotated[
         Optional[InitialState],
         Field(
@@ -604,13 +598,6 @@ class Task(BaseModel):
             default=None,
         ),
     ]
-    required_documents: Annotated[
-        Optional[list[str]],
-        Field(
-            description="List of document titles required to solve the task (knowledge domain).",
-            default=None,
-        ),
-    ]
     user_tools: Annotated[
         Optional[list[str]],
         Field(
@@ -624,9 +611,8 @@ class Task(BaseModel):
         Optional[str],
         Field(
             description="Deterministic text of the agent's scripted first message. "
-            "Overrides the run-level greeting when set. In voice runs it seeds "
-            "the conversation with silence audio; otherwise it is the first "
-            "assistant text message. None preserves the default greeting.",
+            "Overrides the default greeting when set. None preserves the "
+            "default greeting.",
             default=None,
         ),
     ]

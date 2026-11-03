@@ -3,15 +3,10 @@ from typing import Callable, Dict, Optional
 from loguru import logger
 from pydantic import BaseModel
 
-from tau2.agent.discrete_time_audio_native_agent import (
-    create_discrete_time_audio_native_agent,
-)
 from tau2.agent.llm_agent import (
     LLMGTAgent,
-    LLMSoloAgent,
     create_llm_agent,
     create_llm_gt_agent,
-    create_llm_solo_agent,
 )
 from tau2.data_model.tasks import Task
 from tau2.domains.airline.environment import (
@@ -21,47 +16,9 @@ from tau2.domains.airline.environment import get_tasks as airline_domain_get_tas
 from tau2.domains.airline.environment import (
     get_tasks_split as airline_domain_get_tasks_split,
 )
-from tau2.domains.banking_knowledge.environment import (
-    get_environment as knowledge_domain_get_environment,
-)
-from tau2.domains.banking_knowledge.environment import (
-    get_tasks as knowledge_domain_get_tasks,
-)
-from tau2.domains.intake.environment import (
-    get_environment as intake_get_environment,
-)
-from tau2.domains.intake.environment import get_tasks as intake_get_tasks
-from tau2.domains.intake.environment import (
-    get_tasks_split as intake_get_tasks_split,
-)
-from tau2.domains.mock.environment import get_environment as mock_domain_get_environment
-from tau2.domains.mock.environment import get_tasks as mock_domain_get_tasks
-from tau2.domains.retail.environment import (
-    get_environment as retail_domain_get_environment,
-)
-from tau2.domains.retail.environment import get_tasks as retail_domain_get_tasks
-from tau2.domains.retail.environment import (
-    get_tasks_split as retail_domain_get_tasks_split,
-)
-from tau2.domains.telecom.environment import (
-    get_environment_manual_policy as telecom_domain_get_environment_manual_policy,
-)
-from tau2.domains.telecom.environment import (
-    get_environment_workflow_policy as telecom_domain_get_environment_workflow_policy,
-)
-from tau2.domains.telecom.environment import get_tasks as telecom_domain_get_tasks
-from tau2.domains.telecom.environment import (
-    get_tasks_full as telecom_domain_get_tasks_full,
-)
-from tau2.domains.telecom.environment import (
-    get_tasks_small as telecom_domain_get_tasks_small,
-)
-from tau2.domains.telecom.environment import (
-    get_tasks_split as telecom_domain_get_tasks_split,
-)
 from tau2.environment.environment import Environment
-from tau2.user.user_simulator import DummyUser, UserSimulator
-from tau2.user.user_simulator_base import FullDuplexUser, HalfDuplexUser
+from tau2.user.user_simulator import UserSimulator
+from tau2.user.user_simulator_base import HalfDuplexUser
 
 
 class RegistryInfo(BaseModel):
@@ -77,7 +34,7 @@ class Registry:
     """Registry for Users, Agents, and Domains"""
 
     def __init__(self):
-        self._users: Dict[str, type] = {}  # HalfDuplexUser or FullDuplexUser
+        self._users: Dict[str, type] = {}  # HalfDuplexUser subclasses
         self._agent_factories: Dict[str, Callable] = {}  # Factory functions for agents
         self._agent_task_filters: Dict[
             str, Callable[[Task], bool]
@@ -92,14 +49,11 @@ class Registry:
         user_constructor: type,
         name: Optional[str] = None,
     ):
-        """Decorator to register a new User implementation (half-duplex or full-duplex)"""
+        """Register a new User implementation (a HalfDuplexUser subclass)"""
         try:
-            if not (
-                issubclass(user_constructor, HalfDuplexUser)
-                or issubclass(user_constructor, FullDuplexUser)
-            ):
+            if not issubclass(user_constructor, HalfDuplexUser):
                 raise TypeError(
-                    f"{user_constructor.__name__} must implement HalfDuplexUser or FullDuplexUser"
+                    f"{user_constructor.__name__} must implement HalfDuplexUser"
                 )
             key = name or user_constructor.__name__
             if key in self._users:
@@ -128,7 +82,7 @@ class Registry:
             task_filter: Optional callable that takes a Task and returns True if
                 the task is valid for this agent. Used by batch runners to filter
                 tasks before building agents. If None, all tasks are accepted.
-            metadata: Optional dict of agent metadata (e.g., {"solo_mode": True}).
+            metadata: Optional dict of agent metadata.
                 Retrieved via get_agent_metadata().
         """
         if name in self._agent_factories:
@@ -217,7 +171,7 @@ class Registry:
             raise
 
     def get_user_constructor(self, name: str) -> type:
-        """Get a registered User implementation by name (half-duplex or full-duplex)"""
+        """Get a registered User implementation by name"""
         if name not in self._users:
             raise KeyError(f"User {name} not found in registry")
         return self._users[name]
@@ -286,17 +240,6 @@ try:
     registry = Registry()
     # User implementations
     registry.register_user(UserSimulator, "user_simulator")
-    registry.register_user(DummyUser, "dummy_user")
-    try:
-        from tau2.user.user_simulator_streaming import VoiceStreamingUserSimulator
-
-        registry.register_user(
-            VoiceStreamingUserSimulator, "voice_streaming_user_simulator"
-        )
-    except ImportError:
-        logger.debug(
-            "Voice dependencies not installed, skipping voice user registration"
-        )
 
     # Agent factories
     registry.register_agent_factory(create_llm_agent, "llm_agent")
@@ -305,60 +248,14 @@ try:
         "llm_agent_gt",
         task_filter=LLMGTAgent.check_valid_task,
     )
-    registry.register_agent_factory(
-        create_llm_solo_agent,
-        "llm_agent_solo",
-        task_filter=LLMSoloAgent.check_valid_task,
-        metadata={"solo_mode": True},
-    )
-    registry.register_agent_factory(
-        create_discrete_time_audio_native_agent,
-        "discrete_time_audio_native_agent",
-    )
-    registry.register_domain(mock_domain_get_environment, "mock")
-    registry.register_tasks(mock_domain_get_tasks, "mock")
 
+    # Domains and task sets
     registry.register_domain(airline_domain_get_environment, "airline")
     registry.register_tasks(
         airline_domain_get_tasks,
         "airline",
         get_task_splits=airline_domain_get_tasks_split,
     )
-
-    registry.register_domain(retail_domain_get_environment, "retail")
-    registry.register_tasks(
-        retail_domain_get_tasks,
-        "retail",
-        get_task_splits=retail_domain_get_tasks_split,
-    )
-
-    registry.register_domain(telecom_domain_get_environment_manual_policy, "telecom")
-    registry.register_domain(
-        telecom_domain_get_environment_workflow_policy, "telecom-workflow"
-    )
-    registry.register_tasks(telecom_domain_get_tasks_full, "telecom_full")
-    registry.register_tasks(telecom_domain_get_tasks_small, "telecom_small")
-    registry.register_tasks(
-        telecom_domain_get_tasks,
-        "telecom",
-        get_task_splits=telecom_domain_get_tasks_split,
-    )
-    registry.register_tasks(
-        telecom_domain_get_tasks,
-        "telecom-workflow",
-        get_task_splits=telecom_domain_get_tasks_split,
-    )
-
-    registry.register_domain(knowledge_domain_get_environment, "banking_knowledge")
-    registry.register_tasks(knowledge_domain_get_tasks, "banking_knowledge")
-
-    registry.register_domain(intake_get_environment, "intake")
-    registry.register_tasks(
-        intake_get_tasks,
-        "intake",
-        get_task_splits=intake_get_tasks_split,
-    )
-
 
 except Exception as e:
     logger.error(f"Error initializing registry: {str(e)}")

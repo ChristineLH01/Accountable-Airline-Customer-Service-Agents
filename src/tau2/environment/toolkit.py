@@ -10,7 +10,6 @@ from tau2.utils import get_dict_hash, update_pydantic_model_with_dict
 TOOL_ATTR = "__tool__"
 TOOL_TYPE_ATTR = "__tool_type__"
 MUTATES_STATE_ATTR = "__mutates_state__"
-DISCOVERABLE_ATTR = "__discoverable__"
 
 
 T = TypeVar("T", bound=DB)
@@ -91,39 +90,6 @@ def is_tool(
     return decorator
 
 
-def is_discoverable_tool(
-    tool_type: ToolType = ToolType.READ,
-    mutates_state: Optional[bool] = None,
-):
-    """Decorator to mark a function as a discoverable tool.
-
-    Discoverable tools are tools that exist and can be called, but are not
-    included in the agent's system prompt by default. The agent must discover
-    these tools through the knowledge base and unlock them before calling.
-
-    The docstring of the decorated function serves as the tool definition:
-    - First paragraph: tool description
-    - Args section: parameter definitions (parsed for name, type hint, and description)
-    - The function name is the tool name
-
-    Args:
-        tool_type: Conceptual classification (READ, WRITE, THINK, GENERIC).
-        mutates_state: Whether this tool mutates environment / DB state.
-            See :func:`is_tool` for details.
-    """
-    if mutates_state is None:
-        mutates_state = tool_type == ToolType.WRITE
-
-    def decorator(func):
-        setattr(func, TOOL_ATTR, True)
-        setattr(func, TOOL_TYPE_ATTR, tool_type)
-        setattr(func, MUTATES_STATE_ATTR, mutates_state)
-        setattr(func, DISCOVERABLE_ATTR, True)
-        return func
-
-    return decorator
-
-
 class ToolKitBase(metaclass=ToolKitType):
     """Base class for ToolKit classes."""
 
@@ -142,26 +108,19 @@ class ToolKitBase(metaclass=ToolKitType):
         return self.tools[tool_name](**kwargs)
 
     def get_tools(self, include: Optional[list[str]] = None) -> Dict[str, Tool]:
-        """Get the non-discoverable tools available in the ToolKit.
-
-        Discoverable tools are excluded — they should not appear in the
-        agent's system prompt. Use `get_discoverable_tools()` to access them.
+        """Get the tools available in the ToolKit.
 
         Args:
             include: If provided, only return tools whose names are in this list.
-                If None, return all non-discoverable tools (no filtering).
+                If None, return all tools (no filtering).
 
         Returns:
-            A dictionary of non-discoverable tools available in the ToolKit.
+            A dictionary of tools available in the ToolKit.
         """
         # NOTE: as_tool needs to get the function (self.foo), not the `foo(self, ...)`
         # Otherwise, the `self` will exists in the arguments.
         # Therefore, it needs to be called with getattr(self, name)
-        tools = {
-            name: as_tool(tool)
-            for name, tool in self.tools.items()
-            if not getattr(tool, DISCOVERABLE_ATTR, False)
-        }
+        tools = {name: as_tool(tool) for name, tool in self.tools.items()}
         if include is not None:
             allowed = set(include)
             unknown = allowed - set(tools.keys())
@@ -176,24 +135,6 @@ class ToolKitBase(metaclass=ToolKitType):
     def has_tool(self, tool_name: str) -> bool:
         """Check if a tool exists in the ToolKit."""
         return tool_name in self.tools
-
-    def is_discoverable(self, tool_name: str) -> bool:
-        """Check if a tool is a discoverable tool."""
-        if tool_name not in self.tools:
-            return False
-        return getattr(self.tools[tool_name], DISCOVERABLE_ATTR, False)
-
-    def get_discoverable_tools(self) -> Dict[str, Callable]:
-        """Get all discoverable tool methods on this toolkit."""
-        return {
-            name: tool
-            for name, tool in self.tools.items()
-            if getattr(tool, DISCOVERABLE_ATTR, False)
-        }
-
-    def has_discoverable_tool(self, tool_name: str) -> bool:
-        """Check if a discoverable tool exists."""
-        return tool_name in self.get_discoverable_tools()
 
     def tool_type(self, tool_name: str) -> ToolType:
         """Get the type of a tool."""

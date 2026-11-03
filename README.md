@@ -1,343 +1,223 @@
-# $\tau$-Bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains
+# Accountable Airline Customer Service Agents
 
 [![python](https://img.shields.io/badge/Python-3.12%2B-blue.svg?style=flat&logo=python&logoColor=white)](https://www.python.org)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![arXiv](https://img.shields.io/badge/cs.AI-arXiv%3A2506.07982-B31B1B.svg?logo=arxiv&logoColor=red)](https://arxiv.org/abs/2506.07982)
-[![blog](https://img.shields.io/badge/blog-tau--bench-green)](https://sierra.ai/blog/benchmarking-agents-in-collaborative-real-world-scenarios)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/sierra.svg?style=social&label=Follow%20%40SierraPlatform)](https://x.com/SierraPlatform/status/1932464265207889974)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?logo=linkedin&logoColor=white)](https://www.linkedin.com/posts/sierra_last-year-we-introduced-%F0%9D%9C%8F-bench-a-benchmark-activity-7338229693898231809-F8L4?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAdc8goBmhEsiEo1_t_XSJbAnY4_zMfAWcE)
-[![Leaderboard](https://img.shields.io/badge/🏆_Live_Leaderboard-taubench.com-brightgreen?style=flat)](https://taubench.com)
+
+A study of accountable eligibility decisions for airline customer-service agents, based on the
+**airline task of [τ-bench](https://github.com/sierra-research/tau2-bench)**
+(τ³-bench / tau2-bench 2.0) in its **text, English** setting.
+
+An LLM **agent** helps a simulated **customer** (an LLM user simulator) with
+airline requests: booking, changing or cancelling flights, baggage, refunds and
+compensation. The agent must follow a written airline policy and act on a
+flight database through tools. Each conversation is then scored against the
+task's expected outcome.
 
 <div align="center">
 <img src="figs/traj.png" width="95%" alt="Trajectory">
 </div>
 
-## τ-bench 2.0
+## What this repository contains
 
-τ-bench 2.0 adds **τ-i18n** (also called τ-multi): the same customer-service
-tasks in six languages, in text and in full-duplex voice, plus post-hoc judges
-for how the agent speaks.
+This repository is a trimmed copy of tau2-bench with adaptions, focused on the
+airline text task in English. It contains:
 
-What's new:
+| Component | Where | Notes |
+|---|---|---|
+| Airline domain | `src/tau2/domains/airline/`, `data/tau2-airline/` | Flight database, agent policy, 14 tools, 50 tasks with `base` / `train` (30) / `test` (20) splits |
+| Agents | `src/tau2/agent/` | `llm_agent` (the standard tool-calling LLM agent) and `llm_agent_gt` (an oracle agent that is shown the expected actions) |
+| User simulator | `src/tau2/user/` | LLM customer that follows the task scenario, with one of two reviewed English caller personas |
+| Orchestrator | `src/tau2/orchestrator/` | Turn-based loop between agent, user and environment |
+| Evaluator | `src/tau2/evaluator/` | Database end-state check, communicated-information judge, action and NL-assertion checks; optional LLM conversation review |
+| Runner and CLI | `src/tau2/runner/`, `src/tau2/cli.py` | Batch runs with concurrency, retries, checkpointing and resume; `tau2` command |
+| Metrics and viewer | `src/tau2/metrics/`, `src/tau2/scripts/` | pass^k metrics, interactive results browser |
 
-- **Six languages.** `--language` selects a language pack: English, Spanish,
-  Portuguese, Hindi, Chinese and Korean. Each pack localizes the tasks, the
-  database and the caller personas for airline, retail and telecom.
-- **Voice in every language.** Full-duplex voice runs with realtime agents
-  (OpenAI, Gemini, xAI and others) against a simulated caller who speaks the
-  language.
-- **New `intake` domain** (τ-Entity): capturing names, addresses and other
-  entities exactly on an outbound call, over 200 tasks. See
-  [τ-Entity](docs/elicitation.md).
-- **`banking_knowledge` in voice.** The retrieval domain from v1.0 now also runs
-  as a custom voice run (`--audio-native --benchmark none`).
-- **Judges.** `tau2 judges` scores naturalness, speech fidelity, tool use and
-  language-specific checks after a run. Judges do not change the task reward.
-- **Released benchmarks.** Frozen task sets with pinned data, so runs can be
-  checked and compared.
+The prompts the agent and the user simulator receive are **byte-identical to
+tau-bench 2.0's English airline text runs**. A test
+(`tests/test_domains/test_airline/test_prompts_airline.py`) pins them, so
+results stay comparable with upstream English airline runs that use the same
+models.
 
-### The benchmarks
+## Quickstart
 
-| Benchmark | Mode | Cells | Calls at 1 trial | Run with |
-|---|---|---|---|---|
-| `text-v1` | text | 6 languages × 3 domains | 900 | `tau2 run --benchmark text` |
-| `voice-v2` (τ-i18n) | voice | 6 languages × 3 domains | 900 | `tau2 run --audio-native` |
-| `voice-v1` | voice | English × 3 domains | 278 | `tau2 run --audio-native --benchmark voice-v1` |
-
-The domains are airline, retail and telecom. `text-v1` and `voice-v2` use the
-same 50 frozen tasks per domain in every language. `voice-v1` is the English-only
-frame of the current English voice leaderboard (50 airline, 114 retail, 114
-telecom tasks). See the [glossary](docs/glossary.md) for *cell*, *frame* and
-the other terms used in these docs.
-
-### Quickstart
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) and
+Python 3.12 or 3.13.
 
 ```bash
-git clone https://github.com/sierra-research/tau2-bench
-cd tau2-bench
-uv sync --extra voice          # drop --extra voice for text only
-cp .env.example .env           # add OPENAI_API_KEY (and voice keys for voice)
+git clone https://github.com/ChristineLH01/Accountable-Airline-Customer-Service-Agents.git
+cd Accountable-Airline-Customer-Service-Agents
+uv sync --extra dev            # installs the `tau2` command and test tools
+cp .env.example .env           # then add your OPENROUTER_API_KEY
+uv run tau2 check-data         # verifies the data directory
 ```
 
-Text benchmark:
+Run the agent on five airline tasks and browse the results:
 
 ```bash
-tau2 run --benchmark text --agent-llm openai/gpt-5.5 \
-  --agent-llm-args '{"reasoning_effort":"low"}' --save-to text-run --dry-run
+uv run tau2 run --num-tasks 5 --save-to first-run
+uv run tau2 view --file data/simulations/first-run
 ```
 
-Voice benchmark (create your own caller voices first; the shipped voice IDs are
-Sierra-internal):
+All models are called through [OpenRouter](https://openrouter.ai), so one
+`OPENROUTER_API_KEY` gives access to every model. Model names are OpenRouter
+model IDs (e.g. `openai/gpt-6.1-sol`, `anthropic/claude-opus-4.5`); see
+[openrouter.ai/models](https://openrouter.ai/models). Use `--dry-run` to print
+the resolved configuration without making any calls.
+
+## Running evaluations
 
 ```bash
-python -m tau2.voice.scripts.setup_voices --language all   # prints TAU2_VOICE_ID_... lines for .env
-tau2 run --audio-native --audio-native-model gpt-realtime-2 \
-  --reasoning-effort minimal --save-to voice-run --dry-run
+# All 50 tasks, 4 trials each (for pass^1..pass^4), 10 conversations in parallel
+uv run tau2 run --agent-llm openai/gpt-6.1-sol --num-trials 4 --max-concurrency 10 --save-to sol-4trials
+
+# Selected tasks, or a task split (base = all 50, train = 30, test = 20)
+uv run tau2 run --task-ids 0 5 12
+uv run tau2 run --task-split-name test
+
+# The oracle agent, which is shown each task's expected actions
+uv run tau2 run --agent llm_agent_gt
+
+# Resume an interrupted run (the same --save-to continues where it stopped)
+uv run tau2 run --save-to sol-4trials --auto-resume
+
+# Add an LLM review of every conversation (agent and user-simulator errors)
+uv run tau2 run --num-tasks 5 --auto-review
 ```
 
-`--dry-run` prints the plan without making calls. Remove it to run, then:
+`uv run tau2 run --help` lists every option. Defaults come from
+`src/tau2/config.py`:
+
+| Setting | Default |
+|---|---|
+| Agent model | `openai/gpt-6.1-sol`, `reasoning_effort: medium` (`--agent-llm`, `--agent-llm-args`) |
+| User simulator model | `openai/gpt-6.1-sol`, `reasoning_effort: low` (`--user-llm`, `--user-llm-args`) |
+| Judges: communicated information, NL assertions | `openai/gpt-6-luna`, `reasoning_effort: medium` (`--communicate-judge` overrides the first) |
+| Conversation review (`--auto-review`, `tau2 review`) | `openai/gpt-6-luna`, `reasoning_effort: medium` (`--review-model`) |
+| Trials / concurrency / seed / max steps | 1 / 3 / 300 / 200 |
+
+The agent, which is the system under evaluation, reasons at medium effort. The
+user simulator only role-plays its scenario, so it runs at low effort, which
+is faster and cheaper (the released tau-bench 2.0 benchmark also ran its user
+simulator at low effort).
+
+**Matching the released tau-bench 2.0 text benchmark.** Upstream's `text-v1`
+benchmark (English airline cell) runs all 50 airline tasks with the user
+simulator `openai/gpt-5.5` at `reasoning_effort: low`:
 
 ```bash
-tau2 view --file data/simulations/voice-run      # scores and calls
-tau2 judges suite data/simulations/voice-run     # judges (needed for a voice-v2 submission)
+uv run tau2 run --agent-llm <your-model> \
+  --user-llm openai/gpt-5.5 --user-llm-args '{"reasoning_effort": "low"}'
 ```
 
-Add `--domain retail --num-tasks 2` for a 12-call smoke test. Full details:
-[Running the benchmark](docs/running-the-benchmark.md) and the
-[submission guide](docs/leaderboard-submission.md).
+### Results and scoring
 
-### Comparing with v1.0.1
+Each run writes `data/simulations/<save-to>/results.json`: the run
+configuration, the tasks, and every simulation with its messages, tool calls,
+cost, termination reason, caller persona and `reward_info`.
 
-2.0 English runs are **not** input-identical to v1.0.1, so 2.0 scores are not
-comparable with the 1.x leaderboard. The differences:
+A simulation's reward is 1 only if both of the following hold (the airline
+tasks' `reward_basis` is `[DB, COMMUNICATE]`):
 
-- English retail and telecom each use 50 reviewed task replacements.
-- The prompts add a language clause and an entity-order rule (keep multi-part
-  values such as addresses in the task's order).
-- The text user simulator gets a persona block.
-- Communication checks use a semantic LLM judge instead of substring matching.
-- The NL-assertion judge is `gpt-5.4-mini-2026-03-17` (was `gpt-4.1`).
-- Name, ID and phone lookups fold case, accents and formatting.
-- Voice defaults: user simulator `gpt-5.5` (was `gpt-4.1`), a 2400-second call
-  limit (was 1200) and agent voice `marin` (was `alloy`).
+- **DB**: the final flight database equals the one produced by replaying the
+  task's expected actions. Any sequence of actions that reaches the same end
+  state passes.
+- **COMMUNICATE**: every fact in the task's `communicate_info` was conveyed to
+  the customer, as judged by the semantic LLM judge. Use
+  `--communicate-scorer substring` for the original substring match.
 
-For scores comparable to the 1.x leaderboard, use the
-[`v1.0.1` release](https://github.com/sierra-research/tau2-bench/releases/tag/v1.0.1).
-1.x and 2.0 results are shown on separate leaderboard tabs, and 1.x submissions
-are still accepted. The full list is in the
-[CHANGELOG](CHANGELOG.md#upgrading-from-1x).
+Conversations that end abnormally (too many tool errors, step limit, timeout)
+score 0. pass^k is the probability that all k trials of a task succeed. See
+[docs/evaluation.md](docs/evaluation.md) for the full task schema.
 
-### Previous release: τ³-bench (v1.0)
+### Other commands
 
-τ³-bench added voice full-duplex evaluation, the `banking_knowledge` domain and
-75+ task fixes:
-[τ-Voice paper](https://arxiv.org/abs/2603.13686) ·
-[τ-Knowledge paper](https://arxiv.org/abs/2603.04370) ·
-[task fixes paper](https://arxiv.org/abs/2512.07850) ·
-[v1.0.0 release notes](https://github.com/sierra-research/tau2-bench/releases/tag/v1.0.0).
-v1.0.1 fixed `banking_knowledge` grading; results from before 1.0.1 are not
-comparable on that domain (see the [CHANGELOG](CHANGELOG.md#101---2026-07-15)).
+| Command | What it does |
+|---|---|
+| `tau2 view` | Browse runs: metrics, per-simulation conversations, tasks, run configuration |
+| `tau2 evaluate-trajs <paths>` | Re-score saved runs (e.g. after editing tasks, with `--fresh-tasks`) |
+| `tau2 review <path>` | LLM review of saved conversations for agent and user-simulator errors |
+| `tau2 domain airline` | Print the airline policy and the tool reference |
+| `tau2 convert-results <path>` | Convert results between one JSON file and a directory of files |
+| `make env-cli` | Chat with the airline environment directly to try its tools |
 
-> **Upgrading from τ²-bench?** Installation uses `uv` instead of
-> `pip install -e .`, and Python `>=3.12, <3.14` is required.
+## Building your own agent
 
-## Overview
+An agent subclasses `HalfDuplexAgent` and implements `get_init_state()` and
+`generate_next_message()`. Register a factory and run it like the built-in
+agents:
 
-$\tau$-bench is a simulation framework for evaluating customer service agents across multiple domains. It supports text-based half-duplex (turn-based) evaluation and voice full-duplex (simultaneous) evaluation using real-time audio APIs.
+```python
+from tau2.registry import registry
 
-Each domain specifies:
-- A **policy** that the agent must follow
-- A set of **tools** that the agent can use
-- A set of **tasks** to evaluate the agent's performance
-- Optionally: a set of **user tools** for the user simulator
+registry.register_agent_factory(create_my_agent, "my_agent")
+```
 
-**Available domains**: `mock` · `airline` · `retail` · `telecom` · `banking_knowledge` · `intake`
+Runnable examples are in [`examples/agents/`](examples/agents/): a minimal
+agent, a ReAct agent, and a fully manual build of environment, agent, user and
+orchestrator. The [agent guide](src/tau2/agent/README.md) and
+[running simulations](docs/running_simulations.md) cover the Python API.
 
-[τ-Entity](docs/elicitation.md) uses `--domain intake` to evaluate exact entity capture in outbound calls over 200 tasks. Agent-directed elicitation is the default; `--elicitation-strategy scaffolded` selects the scaffolded ablation.
+## Repository layout
 
-| Mode | Description |
-|------|-------------|
-| **Text (half-duplex)** | Turn-based chat with tool use |
-| **Voice (full-duplex)** | End-to-end audio via realtime providers (OpenAI, Gemini, xAI) |
+```
+data/tau2-airline/           db.json, policy.md, tasks.json, split_tasks.json, user_personas.json
+data/simulations/            run outputs (git-ignored)
+src/tau2/
+├── agent/                   LLMAgent, LLMGTAgent, HalfDuplexAgent base
+├── user/                    UserSimulator, guideline scaffold, English caller personas
+├── orchestrator/            turn-based Orchestrator
+├── environment/             Environment, toolkit and DB base classes
+├── domains/airline/         airline data model, tools, environment
+├── evaluator/               reward evaluators and LLM reviewers
+├── metrics/                 pass^k and run metrics
+├── runner/                  build / run / batch layers, checkpointing
+├── data_model/              messages, tasks, run config, results
+├── scripts/                 view, evaluate-trajs, review, domain doc, check-data
+├── cli.py, config.py, registry.py, run.py
+examples/agents/             custom agent examples
+tests/                       pytest suite (plus a tiny test-only mock domain)
+docs/                        getting started, evaluation, simulations API, CLI reference
+```
 
-> [!NOTE]
-> τ-i18n was previously called τ-Multilingual, and τ-Entity was previously
-> called τ-Elicitation. Only the names changed: the old names remain in
-> technical identifiers, provenance and paper titles, and the τ-Entity domain
-> is still `intake`.
-
-## Installation and a first custom run
-
-### 1. Install
+## Development
 
 ```bash
-git clone https://github.com/sierra-research/tau2-bench
-cd tau2-bench
-uv sync                        # core, including scaffolded intake text runs
+make test         # full test suite, no API keys needed
+make test-live    # tests that call real models (needs keys, costs money)
+make check-all    # ruff lint + format (run before committing)
 ```
 
-Optional extras (install what you need):
-
-```bash
-uv sync --extra voice          # + voice/audio-native features
-uv sync --extra knowledge      # + banking_knowledge domain (retrieval pipeline)
-uv sync --extra gym            # + gymnasium RL interface
-uv sync --extra dev            # + pytest, ruff, pre-commit (required for contributing)
-uv sync --all-extras           # everything
-```
-
-This requires [uv](https://docs.astral.sh/uv/getting-started/installation/). Voice features also need system dependencies (`brew install portaudio ffmpeg` on macOS). See the [full installation guide](docs/getting-started.md) for details.
-
-### 2. Set up API keys
-
-```bash
-cp .env.example .env
-# Edit .env with your API keys (uses LiteLLM — any supported provider works)
-```
-
-### 3. Run an evaluation
-
-```bash
-tau2 run --domain airline --agent-llm gpt-4.1 --user-llm gpt-4.1 \
-  --num-trials 1 --num-tasks 5
-```
-
-Results are saved to `data/simulations/`. Use `tau2 view` to browse them.
-
-> **Tip**: Run `tau2 intro` for an overview of available domains, commands, and examples.
-
-## Documentation
-
-### Getting Started
-
-| Document | Description |
-|----------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation, API keys, first run, output structure, configuration |
-| [Running the benchmark](docs/running-the-benchmark.md) | Text and voice benchmark commands, defaults, results layout, resume, scoring and judges |
-| [Submission guide](docs/leaderboard-submission.md) | Submitting text-v1, voice-v2, voice-v1 and 1.x results |
-| [Glossary](docs/glossary.md) | Pack, cell, frame, binding revision, pin, trial, judge, manifest |
-| [CLI Reference](docs/cli-reference.md) | Every `tau2` command's `--help`, generated from the CLI |
-
-### Core Concepts
-
-| Document | Description |
-|----------|-------------|
-| [Agent Developer Guide](src/tau2/agent/README.md) | Build and evaluate your own agent |
-| [Domains](src/tau2/domains/README.md) | Domain structure, data format, and available domains |
-| [Orchestrator & Communication Modes](src/tau2/orchestrator/README.md) | Half-duplex and full-duplex orchestration |
-| [Task Schema & Evaluation](docs/evaluation.md) | What `evaluation_criteria.actions` means, how `reward_basis` gates the reward, and how to inspect action correctness |
-
-### Languages and judges
-
-| Document | Description |
-|----------|-------------|
-| [Language packs](docs/language-packs.md) | What a language pack contains and how runs resolve it |
-| [Adding a language](docs/language-authoring.md) | The `tau2 factory` authoring workflow |
-| [Judge validation](docs/judge-validation.md) | Production judges, and authoring and validating new ones |
-| [τ-Entity](docs/elicitation.md) | The `intake` domain and its strategies |
-
-### Knowledge Retrieval
-
-| Document | Description |
-|----------|-------------|
-| [Knowledge Retrieval](src/tau2/knowledge/README.md) | Retrieval pipeline configs, embeddings, RAG, and sandbox setup for the `banking_knowledge` domain |
-
-### Voice & Audio
-
-| Document | Description |
-|----------|-------------|
-| [Voice (Full-Duplex)](src/tau2/voice/README.md) | Providers, speech complexity, CLI options, and output structure for voice evaluation |
-| [Audio Native Architecture](src/tau2/voice/audio_native/README.md) | Internal architecture for adding or modifying realtime provider adapters |
-
-### RL & Training
-
-| Document | Description |
-|----------|-------------|
-| [Gym Interface](src/tau2/gym/README.md) | Gymnasium-compatible environment, play mode, train/test splits |
-
-### Leaderboard & Experiments
-
-| Document | Description |
-|----------|-------------|
-| [Submission guide](docs/leaderboard-submission.md) | How to submit results to [taubench.com](https://taubench.com) |
-| [Experiments](src/experiments/README.md) | Experimental features and research code |
-
-### Project
-
-| Document | Description |
-|----------|-------------|
-| [Contributing](CONTRIBUTING.md) | How to contribute to τ-bench |
-| [Changelog](CHANGELOG.md) | Version history and release notes |
-
-## Contributing
-
-We welcome contributions! Whether you're fixing bugs, adding features, creating domains, or contributing research code, see our [Contributing Guide](CONTRIBUTING.md) for guidelines.
+`docs/getting-started.md` covers installation and configuration in more detail.
 
 ## Citation
 
-If you use a specific component of $\tau^3$-bench, please cite the corresponding paper below.
-
-### Knowledge Domain (`banking_knowledge`)
+This project builds on τ-bench. If you use it, please cite:
 
 ```bibtex
-@article{shi2026tau,
-  title={$\tau$-Knowledge: Evaluating Conversational Agents over Unstructured Knowledge},
-  author={Shi, Quan and Zytek, Alexandra and Razavi, Pedram and Narasimhan, Karthik and Barres, Victor},
-  journal={arXiv preprint arXiv:2603.04370},
-  year={2026}
-}
-```
-
-### Voice Full-Duplex Benchmark
-
-```bibtex
-
-@misc{ray2026tauvoicebenchmarkingfullduplexvoice,
-      title={$\tau$-Voice: Benchmarking Full-Duplex Voice Agents on Real-World Domains},
-      author={Soham Ray and Keshav Dhandhania and Victor Barres and Karthik Narasimhan},
-      year={2026},
-      eprint={2603.13686},
-      archivePrefix={arXiv},
-      primaryClass={cs.SD},
-      url={https://arxiv.org/abs/2603.13686},
-}
-```
-
-### Multilingual Voice Benchmark (τ-i18n)
-
-```bibtex
-@misc{ray2026taumultilingual,
-      title={$\tau$-Multilingual: Benchmarking Voice Agents Across Languages},
-      author={Soham Ray and Edgard dos Santos Paiva and Ruben Valenzuela and Karthik Narasimhan and Keshav Dhandhania and Victor Barres},
-      year={2026},
-      eprint={2609.35820},
-      archivePrefix={arXiv},
-      url={https://arxiv.org/abs/2609.35820},
-}
-```
-
-### Entity Capture Benchmark (τ-Entity, `intake`)
-
-```bibtex
-@misc{ray2026tauelicitation,
-      title={$\tau$-Elicitation: Benchmarking Multi-Turn Entity Extraction in Voice Agents},
-      author={Soham Ray and Victor Barres},
-      year={2026},
-      eprint={2609.13602},
-      archivePrefix={arXiv},
-      url={https://arxiv.org/abs/2609.13602},
-}
-```
-
-### Core $\tau$-Bench
-
-```bibtex
-
 @misc{barres2025tau2,
-      title={$\tau^2$-Bench: Evaluating Conversational Agents in a Dual-Control Environment}, 
+      title={$\tau^2$-Bench: Evaluating Conversational Agents in a Dual-Control Environment},
       author={Victor Barres and Honghua Dong and Soham Ray and Xujie Si and Karthik Narasimhan},
       year={2025},
       eprint={2506.07982},
       archivePrefix={arXiv},
       primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2506.07982}, 
+      url={https://arxiv.org/abs/2506.07982},
 }
 
 @misc{yao2024tau,
-      title={$\tau$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains}, 
+      title={$\tau$-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains},
       author={Shunyu Yao and Noah Shinn and Pedram Razavi and Karthik Narasimhan},
       year={2024},
       eprint={2406.12045},
       archivePrefix={arXiv},
       primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2406.12045}, 
+      url={https://arxiv.org/abs/2406.12045},
 }
 ```
 
-### Task Fixes
+The airline tasks include the τ³-bench task fixes (27 airline tasks), described in:
 
 ```bibtex
-
 @inproceedings{cuadron2026saber,
       title={{SABER}: Small Actions, Big Errors {\textemdash} Safeguarding Mutating Steps in {LLM} Agents},
       author={Alejandro Cuadron and Pengfei Yu and Yang Liu and Arpit Gupta},
@@ -346,3 +226,7 @@ If you use a specific component of $\tau^3$-bench, please cite the corresponding
       url={https://openreview.net/forum?id=En2z9dckgP},
 }
 ```
+
+## License
+
+MIT, as the upstream project. See [LICENSE](LICENSE).

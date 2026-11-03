@@ -1,12 +1,11 @@
 import json
 
 from tau2.config import DEFAULT_LLM_NL_ASSERTIONS, DEFAULT_LLM_NL_ASSERTIONS_ARGS
-from tau2.data_model.message import Message, SystemMessage, Tick, UserMessage
+from tau2.data_model.message import Message, SystemMessage, UserMessage
 from tau2.data_model.simulation import NLAssertionCheck, RewardInfo
 from tau2.data_model.tasks import RewardType, Task
 from tau2.evaluator.evaluator_base import EvaluatorBase
 from tau2.utils.llm_utils import generate
-from tau2.utils.transcript.views import speech_messages
 
 
 class NLAssertionsEvaluator(EvaluatorBase[Message]):
@@ -129,69 +128,3 @@ class NLAssertionsEvaluator(EvaluatorBase[Message]):
             )
             for result in result_data.get("results", [])
         ]
-
-
-class FullDuplexNLAssertionsEvaluator(EvaluatorBase[Tick]):
-    """
-    Judge that evaluates whether a full-duplex trajectory adheres to all the
-    natural-language assertions.
-    """
-
-    @classmethod
-    def ticks_to_message_history(cls, ticks: list[Tick]) -> list[Message]:
-        """Use the shared speech_messages transcript view."""
-        return speech_messages(ticks)
-
-    @classmethod
-    def calculate_reward(
-        cls,
-        task: Task,
-        full_trajectory: list[Tick],
-    ) -> RewardInfo:
-        """
-        Calculate the reward for the simulation by using an LLM to evaluate whether
-        the trajectory adheres to all the natural-language assertions.
-        """
-        if task.evaluation_criteria is None:
-            return RewardInfo(
-                reward=1.0,
-                nl_assertions=[],
-                info={"note": "No evaluation criteria"},
-                reward_breakdown={RewardType.NL_ASSERTION: 1.0},
-            )
-        nl_assertions = task.evaluation_criteria.nl_assertions
-        if not nl_assertions:
-            return RewardInfo(
-                reward=1.0,
-                nl_assertions=[],
-                info={"note": "No nl_assertions to evaluate"},
-                reward_breakdown={RewardType.NL_ASSERTION: 1.0},
-            )
-
-        # Convert ticks to linearized message history
-        messages = cls.ticks_to_message_history(full_trajectory)
-
-        nl_assertions_checks = cls.evaluate_nl_assertions(messages, nl_assertions)
-
-        # Calculate reward: 1 if all expectations are met, 0 otherwise
-        all_expectations_met = all(result.met for result in nl_assertions_checks)
-        reward = 1.0 if all_expectations_met else 0.0
-
-        return RewardInfo(
-            reward=reward,
-            nl_assertions=nl_assertions_checks,
-            reward_breakdown={RewardType.NL_ASSERTION: reward},
-        )
-
-    @classmethod
-    def evaluate_nl_assertions(
-        cls,
-        trajectory: list[Message],
-        nl_assertions: list[str],
-    ) -> list[NLAssertionCheck]:
-        """
-        Evaluate whether the trajectory meets each expected outcome.
-
-        Delegates to NLAssertionsEvaluator.evaluate_nl_assertions.
-        """
-        return NLAssertionsEvaluator.evaluate_nl_assertions(trajectory, nl_assertions)

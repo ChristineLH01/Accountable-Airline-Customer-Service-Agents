@@ -1,100 +1,99 @@
-# Tau2 Domains
+# Domains
 
-This folder contains the domains for the Tau2 project.
+This folder contains the domains: a database, the tools that act on it, a
+policy for the agent and a set of tasks.
 
-## Domain Structure
+## Available domains
 
-Each domain has its own folder with the following structure:
+| Domain | Where | Description |
+|--------|-------|-------------|
+| `airline` | `src/tau2/domains/airline/`, `data/tau2-airline/` | Flight booking, changes, cancellations, baggage and compensation. The only shipped domain: 50 tasks. |
+| `mock` | `tests/mock_domain/` (test-only) | Small task-management domain with agent and user tools, used by the test suite. Registered by `tests/conftest.py`; not available from the `tau2` CLI. |
 
-- `data_model.py`: Defines the data models for the domain. 
-    - Implements a subclass of `DB` (e.g. `FlightDB(DB)`) which is the base class for all domain databases (defined in `tau2/environment/db.py`).
-- `user_data_model.py`: Defines the data models for the user data for the domain. (Optional)
-    - Implements a subclass of `DB` for the domain's user database.
-- `tools.py`: Defines the tools for the domain. 
-    - Implements a subclass of `ToolKitBase` (e.g. `AirlineTools(ToolKitBase)`) which is the base class for all domain toolkits (defined in `tau2/environment/toolkit.py`). 
-- `user_tools.py`: Defines the user tools for the domain. (Optional)
-    - Implements a subclass of `ToolKitBase` for user-facing tools. 
-- `environment.py`: Defines the environment for the domain. 
-    - Implements `get_environment()` function that returns an `Environment` instance for the domain.
-    - Implements `get_tasks()` function that returns a list of tasks for the domain.
-    - Implements `get_tasks_split()` function that returns a dictionary mapping split names to lists of task IDs.
-- `utils.py`: Defines the utility functions for the domain (e.g. data paths).
+## Domain structure
 
-## Data Storage
+Each domain package has:
 
-All the data for the domain is stored in `data/tau2/domains/<domain_name>` folder.
-Should contain:
-- `tasks.json`: A JSON file containing the tasks for the domain.
-- `tasks_voice.json`: A JSON file containing the voice tasks for the domain.
-- `split_tasks.json`: A JSON file containing the task splits for the domain.
-    - The split file naming follows the pattern `split_<tasks_file_stem>.json` (e.g. `split_tasks.json` for `tasks.json`).
-    - The task splits are defined as a dictionary mapping split names to lists of task IDs.
-    - The task IDs are defined in the `tasks.json` file.
-    - It must at minimum implement a task split called `base`. This will be the default task split.
-- `policy.md`: A markdown file containing the policy for the domain.
-- `db.json` or `db.toml`: A JSON or TOML file containing the database for the domain.
-- `user_db.json` or `user_db.toml`: A JSON or TOML file containing the user database for the domain. (Optional)
+- `data_model.py`: the domain's data models, including a subclass of `DB`
+  (`tau2/environment/db.py`), e.g. `FlightDB(DB)`.
+- `tools.py`: a subclass of `ToolKitBase` (`tau2/environment/toolkit.py`),
+  e.g. `AirlineTools(ToolKitBase)`, whose methods decorated with `@is_tool(...)`
+  become the agent's tools.
+- `environment.py`:
+  - `get_environment(...)` returns an `Environment` with the domain's name,
+    policy and toolkit(s). Airline's accepts optional `db` and `policy`
+    overrides.
+  - `get_tasks(task_split_name)` returns the domain's `Task`s, optionally for
+    one split.
+  - `get_tasks_split()` returns a dict mapping split names to task IDs.
+- `utils.py`: data paths (e.g. `AIRLINE_DB_PATH`).
+- Optional: `user_data_model.py` and `user_tools.py` for a user-side database
+  and tools the user simulator can call (the mock domain has them; airline
+  does not).
 
-## Task Schema and Evaluation
+## The airline domain
+
+| File | Contents |
+|------|----------|
+| `data/tau2-airline/db.json` | Users, reservations and flights (`FlightDB`) |
+| `data/tau2-airline/policy.md` | The agent policy |
+| `data/tau2-airline/tasks.json` | 50 tasks, all with `reward_basis` `[DB, COMMUNICATE]` |
+| `data/tau2-airline/split_tasks.json` | Splits `base` (all 50, the default), `train` (30) and `test` (20) |
+| `data/tau2-airline/user_personas.json` | The two caller personas and each task's caller gender (see `tau2/user/personas.py`) |
+
+`tau2 domain airline` prints the policy and a table of the 14 agent tools.
+
+## Task schema and evaluation
 
 Each entry in `tasks.json` is a `Task` (see
 [`src/tau2/data_model/tasks.py`](../data_model/tasks.py)) with an
-`evaluation_criteria` block. Note: `evaluation_criteria.actions` is
-*one* reference trajectory used to derive the target DB end state, not
-a per-call requirement on the agent (unless `RewardType.ACTION` is in
-`reward_basis`, which the standard airline / retail / telecom tasks do
-not use). See [`docs/evaluation.md`](../../../docs/evaluation.md) for
-the full breakdown.
+`evaluation_criteria` block. Note: `evaluation_criteria.actions` is *one*
+reference trajectory used to derive the target DB end state, not a per-call
+requirement on the agent (unless `RewardType.ACTION` is in `reward_basis`,
+which no airline task uses). See
+[`docs/evaluation.md`](../../../docs/evaluation.md) for the full breakdown.
 
+## Adding a domain
+
+1. Create `src/tau2/domains/<name>/` with the files above, and put its data in
+   `data/tau2-<name>/`: `tasks.json`, `split_tasks.json` (at least a
+   `base` split; the file name is `split_<tasks file stem>.json`),
+   `policy.md` and the database file.
+2. Register it in `src/tau2/registry.py`:
+
+   ```python
+   from tau2.domains.my_domain.environment import (
+       get_environment as my_domain_get_environment,
+       get_tasks as my_domain_get_tasks,
+       get_tasks_split as my_domain_get_tasks_split,
+   )
+
+   registry.register_domain(my_domain_get_environment, "my_domain")
+   registry.register_tasks(
+       my_domain_get_tasks, "my_domain", get_task_splits=my_domain_get_tasks_split
+   )
+   ```
+
+   The domain name is what `tau2 run --domain` accepts; the task-set name is
+   what `--task-set-name` accepts (it defaults to the domain name).
+   `tests/conftest.py` shows the same calls for the mock domain, made at
+   runtime on the global `tau2.registry.registry`.
+3. Add tests under `tests/test_domains/test_<name>/`.
+
+The agent's policy is the domain policy followed by `AGENT_LANGUAGE_CLAUSE`
+(`tau2/runner/build.py`). A domain without a
+`data/tau2-<name>/user_personas.json` runs its user simulator without a
+caller persona.
 
 ## Tests
-All the tests for the domain are stored in the `tests/test_domains/test_<domain_name>` folder.
-- `test_tools_<domain_name>.py`: Contains tests for the tools for the domain.
-- `test_user_tools_<domain_name>.py`: Contains tests for the user tools for the domain (if any)
 
+Domain tests live in `tests/test_domains/test_<domain_name>/`:
 
-To run tests:
+- `test_tools_airline.py`: the airline tools, called through
+  `environment.get_response(ToolCall(...))`.
+- `test_prompts_airline.py`: pins the agent and user-simulator prompts to
+  those of τ-bench 2.0.
+
 ```sh
-pytest tests/test_domains/test_<domain_name>
-```
-
-## Available Domains
-
-| Domain | Description |
-|--------|-------------|
-| `mock` | Lightweight test domain for development |
-| `airline` | Flight booking, cancellation, and customer support |
-| `retail` | Order management, returns, and product inquiries |
-| `telecom` | Telecom account management and troubleshooting |
-| `banking_knowledge` | Knowledge-retrieval-based banking customer service with configurable RAG pipelines |
-| `intake` | Outbound elicitation with an agent-directed default and a scaffolded strategy ablation |
-
-The `intake` domain and task set use `src/tau2/domains/intake/`,
-`data/tau2/domains/intake/`, and `tests/test_domains/test_intake/`. Agent-directed
-voice elicitation is the default. Select `--elicitation-strategy scaffolded` for
-the scaffolded ablation, which also supports text. Both strategies use the same
-frozen task collection with strategy-specific policies and tool schemas.
-See the [elicitation guide](../../../docs/elicitation.md) and
-`tau2 intake-tasks --help` for usage and reproduction.
-
-### `banking_knowledge` Domain
-
-The `banking_knowledge` domain differs from standard domains in several ways:
-
-- **Configurable retrieval**: Uses `--retrieval-config` to select how the agent accesses the knowledge base (e.g., `qwen_embeddings`, `grep_only`, `terminal_use`). Different configs give the agent different tools and system prompts.
-- **Dual data sources**: A `TransactionalDB` for user/account data and a `KnowledgeBase` of 700+ documents for retrieval.
-- **Extended data directory**: Contains `documents/`, `prompts/` (per-variant policy templates), and `tasks/` subdirectories.
-- **Retrieval pipeline**: Uses the `src/tau2/knowledge/` module for embeddings, BM25, grep, reranking, and sandboxed shell access. See `src/tau2/knowledge/README.md` for config details.
-
-## Registering your domain
-To make it easy for people to use your domain, you need to register your `get_environment`, `get_tasks`, and `get_tasks_split` functions in Tau2 `registry.py` file.
-
-In `registry.py`:
-```python
-from tau2.domains.your_domain.environment import get_environment as your_domain_get_environment
-from tau2.domains.your_domain.environment import get_tasks as your_domain_get_tasks
-from tau2.domains.your_domain.environment import get_tasks_split as your_domain_get_tasks_split
-...
-registry.register_domain(your_domain_get_environment, "your_domain_name")
-registry.register_tasks(your_domain_get_tasks, "your_domain_name", get_task_splits=your_domain_get_tasks_split)
+uv run pytest tests/test_domains/test_airline
 ```

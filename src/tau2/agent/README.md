@@ -1,280 +1,207 @@
 # Agent Developer Guide
 
-> **Quick start:** See `examples/agents/` for runnable code you can copy and modify.
+> **Quick start:** see `examples/agents/` for runnable code you can copy and
+> modify (`minimal_text_agent.py`, `react_agent.py`, `custom_agent_eval.py`).
 
 ## Overview
 
-Agents are the system-under-test in tau2 evals. An agent interacts with a simulated user and uses environment tools (API endpoints) to resolve customer service tasks. The eval framework scores the agent on whether it takes the correct actions and follows domain policy.
+Agents are the system under test. An agent talks with a simulated customer
+and calls the airline tools to resolve the customer's request while following
+the airline policy. The evaluator then scores the simulation (see
+[`docs/evaluation.md`](../../../docs/evaluation.md)).
 
-There are two communication protocols, each with a corresponding base class:
-
-- **Half-Duplex** (`HalfDuplexAgent`) -- Turn-based text conversations. One party speaks at a time.
-- **Full-Duplex** (`FullDuplexAgent`) -- Tick-based streaming (e.g., voice). Both parties can speak simultaneously.
+Communication is turn-based (half-duplex): the agent receives one message,
+returns one message, and the orchestrator routes it to the user or, for tool
+calls, to the environment.
 
 ## Architecture
 
 ```
-HalfDuplexParticipant          FullDuplexParticipant
-  (base/participant.py)          (base/participant.py)
-        |                              |
-  HalfDuplexAgent               FullDuplexAgent
-  (base_agent.py)               (base_agent.py)
-        |                              |
-     LLMAgent              DiscreteTimeAudioNativeAgent
-  (llm_agent.py)      (discrete_time_audio_native_agent.py)
+HalfDuplexParticipant   (base/participant.py)
+        |
+  HalfDuplexAgent       (base_agent.py)
+        |
+  LLMAgent, LLMGTAgent  (llm_agent.py; both also mix in LLMConfigMixin)
 ```
 
 ### HalfDuplexAgent
 
-For turn-based agents. You must implement:
+You must implement:
 
-- `get_init_state(message_history) -> StateType` -- Return the initial agent state.
-- `generate_next_message(message, state) -> (AssistantMessage, StateType)` -- Given a user or tool message and the current state, produce the next assistant message.
-
-Input types: `UserMessage | ToolMessage | MultiToolMessage`
-Output type: `AssistantMessage`
-
-### FullDuplexAgent
-
-For streaming / tick-based agents (e.g., voice). You must implement:
-
-- `get_init_state(message_history) -> StateType` -- Return the initial agent state.
-- `get_next_chunk(state, participant_chunk=None, tool_results=None) -> (AssistantMessage, StateType)` -- Process one tick of input and produce one tick of output.
+- `get_init_state(message_history=None) -> StateType`: the initial agent
+  state. `message_history` is non-empty only when a task starts mid-conversation.
+- `generate_next_message(message, state) -> (AssistantMessage, StateType)`:
+  given a user or tool message and the current state, produce the next
+  assistant message.
 
 Input types: `UserMessage | ToolMessage | MultiToolMessage`
-Output type: `AssistantMessage`
+(`ValidAgentInputMessage`). Output type: `AssistantMessage`.
 
-### Shared constructor contract
+Optional overrides: `stop(message, state)` for cleanup, `set_seed(seed)`, and
+`is_stop(message)` to end the conversation from the agent side (the default
+never stops; conversations normally end when the user simulator emits
+`###STOP###`, `###TRANSFER###` or `###OUT-OF-SCOPE###`).
 
-Both `HalfDuplexAgent` and `FullDuplexAgent` expect these constructor arguments:
+### Constructor contract
 
 ```python
 def __init__(self, tools: list[Tool], domain_policy: str):
 ```
 
-- `tools` -- The environment tools (API endpoints) the agent can call.
-- `domain_policy` -- The policy text the agent must follow.
+- `tools`: the environment tools the agent can call.
+- `domain_policy`: the policy text the agent must follow.
 
-If your agent uses an LLM, mix in `LLMConfigMixin` (from `tau2.agent.base.llm_config`) which adds `llm: str` and `llm_args: dict` parameters.
+If your agent uses an LLM, mix in `LLMConfigMixin` (from
+`tau2.agent.base.llm_config`), which adds `llm: str` and `llm_args: dict`
+parameters and a `set_seed()` that writes the seed into `llm_args`.
 
-## Core Agent Types
+## Built-in agents
 
-### LLMAgent (text evals, half-duplex)
-
-`LLMAgent` is the standard agent for text-based evals. It wraps an LLM with tool-calling support in a turn-based loop.
-
-- **Base classes:** `LLMConfigMixin`, `HalfDuplexAgent`
-- **State:** `LLMAgentState` (holds `system_messages` and `messages`)
-- **Constructor:** `tools`, `domain_policy`, `llm`, `llm_args`
+| Registered name | Class | What it does |
+|-----------------|-------|--------------|
+| `llm_agent` (default) | `LLMAgent` | An LLM with tool calling. The system prompt is a short instruction block plus the policy. |
+| `llm_agent_gt` | `LLMGTAgent` | Same, but the prompt also lists the task's reference `actions` as resolution steps. Used to sanity-check the user simulator; only runs on tasks with at least one action. |
 
 ```python
 from tau2.agent import LLMAgent
+from tau2.runner import build_environment
+from tau2.runner.build import agent_domain_policy
 
-# Create the agent
+env = build_environment("airline")
 agent = LLMAgent(
     tools=env.get_tools(),
-    domain_policy=env.get_policy(),
-    llm="gpt-4o",
-    llm_args={"temperature": 0.7},
+    domain_policy=agent_domain_policy(env),
+    llm="openai/gpt-6.1-sol",
+    llm_args={"reasoning_effort": "medium"},
 )
 
-# Initialize state
 state = agent.get_init_state()
-
-# Turn-based loop (simplified)
 response, state = agent.generate_next_message(user_msg, state)
 ```
 
-### DiscreteTimeAudioNativeAgent (voice evals, full-duplex)
+`agent_domain_policy(env)` is the policy the CLI gives every agent: the
+airline `policy.md` followed by an English-language clause
+(`AGENT_LANGUAGE_CLAUSE` in `tau2/runner/build.py`). Use it to keep prompts
+identical to the τ-bench 2.0 English runs.
 
-`DiscreteTimeAudioNativeAgent` is the agent for voice evals. It connects to an audio-native API (OpenAI Realtime, Gemini Live, xAI) and exchanges audio in discrete time ticks.
+## How to develop a new agent
 
-- **Base class:** `FullDuplexAgent`
-- **State:** `DiscreteTimeAgentState` (tracks tick count, audio bytes, message history)
-- **Constructor:** `tools`, `domain_policy`, plus provider-specific options (`tick_duration_ms`, `provider`, `model`, `modality`, etc.)
+### Step 1: Define a state class
 
-```python
-from tau2.agent.discrete_time_audio_native_agent import DiscreteTimeAudioNativeAgent
-
-# OpenAI Realtime (default provider)
-agent = DiscreteTimeAudioNativeAgent(
-    tools=env.get_tools(),
-    domain_policy=env.get_policy(),
-    tick_duration_ms=1000,
-)
-
-# Gemini Live
-agent = DiscreteTimeAudioNativeAgent(
-    tools=env.get_tools(),
-    domain_policy=env.get_policy(),
-    tick_duration_ms=1000,
-    provider="gemini",
-)
-
-# Initialize state (connects to the API)
-state = agent.get_init_state()
-
-# Tick-based loop (driven by the orchestrator)
-response, state = agent.get_next_chunk(
-    state, participant_chunk=incoming_user_chunk, tool_results=pending_tool_results
-)
-```
-
-## How to Develop a New Agent
-
-### Step 1: Choose the right base class
-
-| Eval type | Base class | Key method |
-|-----------|-----------|------------|
-| Text (turn-based) | `HalfDuplexAgent` | `generate_next_message()` |
-| Voice (tick-based) | `FullDuplexAgent` | `get_next_chunk()` |
-
-### Step 2: Define a state class
-
-Your agent needs a state object to track conversation history and any internal data between turns/ticks. Use a Pydantic `BaseModel`:
+Use a Pydantic `BaseModel` to hold the conversation history and anything else
+you track between turns:
 
 ```python
 from pydantic import BaseModel
-from tau2.data_model.message import SystemMessage, Message
+
+from tau2.data_model.message import APICompatibleMessage, SystemMessage
+
 
 class MyAgentState(BaseModel):
     system_messages: list[SystemMessage]
-    messages: list[Message]
-    # ... any additional fields your agent needs
+    messages: list[APICompatibleMessage]
 ```
 
-For full-duplex agents, you can extend `StreamingState` (from `tau2.agent.base.streaming`) which includes tick-tracking fields out of the box.
-
-### Step 3: Implement the agent
-
-Here is a minimal half-duplex agent skeleton:
+### Step 2: Implement the agent
 
 ```python
-from typing import List, Optional
+from typing import Optional
+
 from tau2.agent.base.llm_config import LLMConfigMixin
 from tau2.agent.base_agent import HalfDuplexAgent, ValidAgentInputMessage
-from tau2.data_model.message import AssistantMessage, EnvironmentMessage, Message, SystemMessage
+from tau2.data_model.message import (
+    AssistantMessage,
+    Message,
+    MultiToolMessage,
+    SystemMessage,
+)
 from tau2.environment.tool import Tool
+from tau2.utils.llm_utils import generate
 
-class MyAgent(LLMConfigMixin, HalfDuplexAgent["MyAgentState"]):
+
+class MyAgent(LLMConfigMixin, HalfDuplexAgent[MyAgentState]):
     def __init__(
         self,
-        tools: List[Tool],
+        tools: list[Tool],
         domain_policy: str,
         llm: str,
         llm_args: Optional[dict] = None,
     ):
         super().__init__(
-            tools=tools,
-            domain_policy=domain_policy,
-            llm=llm,
-            llm_args=llm_args,
+            tools=tools, domain_policy=domain_policy, llm=llm, llm_args=llm_args
         )
 
     def get_init_state(
         self, message_history: Optional[list[Message]] = None
-    ) -> "MyAgentState":
+    ) -> MyAgentState:
         return MyAgentState(
-            system_messages=[SystemMessage(role="system", content="...")],
-            messages=message_history or [],
+            system_messages=[SystemMessage(role="system", content=self.domain_policy)],
+            messages=list(message_history or []),
         )
 
     def generate_next_message(
-        self, message: ValidAgentInputMessage, state: "MyAgentState"
-    ) -> tuple[AssistantMessage, "MyAgentState"]:
-        # Your logic here: call LLM, process tool results, etc.
-        ...
+        self, message: ValidAgentInputMessage, state: MyAgentState
+    ) -> tuple[AssistantMessage, MyAgentState]:
+        if isinstance(message, MultiToolMessage):
+            state.messages.extend(message.tool_messages)
+        else:
+            state.messages.append(message)
+        response = generate(
+            model=self.llm,
+            tools=self.tools,
+            messages=state.system_messages + state.messages,
+            **self.llm_args,
+        )
+        state.messages.append(response)
+        return response, state
 ```
 
-And a minimal full-duplex agent skeleton:
+Put `LLMConfigMixin` before `HalfDuplexAgent` in the bases so its `__init__`
+consumes `llm` and `llm_args` before the base class runs.
+
+### Step 3: Provide a factory and register it
+
+The runner builds agents through factory functions:
 
 ```python
-from typing import List, Optional, Tuple
-from tau2.agent.base_agent import FullDuplexAgent, ValidAgentInputMessage
-from tau2.data_model.message import AssistantMessage, EnvironmentMessage, Message
-from tau2.environment.tool import Tool
-
-class MyStreamingAgent(FullDuplexAgent["MyStreamingState"]):
-    def __init__(
-        self,
-        tools: List[Tool],
-        domain_policy: str,
-        # ... provider-specific params
-    ):
-        super().__init__(tools=tools, domain_policy=domain_policy)
-
-    def get_init_state(
-        self, message_history: Optional[list[Message]] = None
-    ) -> "MyStreamingState":
-        # Initialize state and connect to any external APIs
-        ...
-
-    def get_next_chunk(
-        self,
-        state: "MyStreamingState",
-        participant_chunk: Optional[ValidAgentInputMessage] = None,
-        tool_results: Optional[EnvironmentMessage] = None,
-    ) -> Tuple[Optional[AssistantMessage], "MyStreamingState"]:
-        # Process one tick: extract input, call API, build response
-        ...
+def create_my_agent(tools, domain_policy, **kwargs):
+    """kwargs: llm (from --agent-llm), llm_args (--agent-llm-args), task."""
+    return MyAgent(
+        tools=tools,
+        domain_policy=domain_policy,
+        llm=kwargs.get("llm"),
+        llm_args=kwargs.get("llm_args"),
+    )
 ```
 
-### Step 4: Provide a factory function and register the agent
-
-Agents are integrated into the eval framework via **factory functions**. A factory encapsulates all construction logic, following the same pattern as domain factories (`get_environment()`). The factory signature is:
-
-```python
-def create_agent(tools, domain_policy, **kwargs):
-    """
-    Factory function called by the eval framework.
-
-    Args:
-        tools: Environment tools (API endpoints) the agent can call.
-        domain_policy: Policy text the agent must follow.
-        **kwargs: Additional arguments from the CLI/config:
-            - llm (str): LLM model name (from --agent-llm)
-            - llm_args (dict): Additional LLM arguments
-            - task (Task): The current task being evaluated
-    """
-    return MyAgent(tools=tools, domain_policy=domain_policy, ...)
-```
-
-There are two ways to register an agent, depending on whether it is a core or community contribution.
-
-**Core agents** register a factory directly in `src/tau2/registry.py`:
+Register it in `src/tau2/registry.py` so `tau2 run --agent my_agent` can use
+it:
 
 ```python
-from tau2.agent.my_agent import create_my_agent
-
 registry.register_agent_factory(create_my_agent, "my_agent")
 ```
 
-The name you pass (e.g., `"my_agent"`) is what you will use on the CLI with `--agent`.
+`register_agent_factory` also takes an optional `task_filter` (a callable
+`Task -> bool`; tasks it rejects are skipped by `run_domain`) and `metadata`.
+In a script you can register on the global `tau2.registry.registry` instead
+of editing the file (as `examples/agents/minimal_text_agent.py` does).
 
-## Understanding the Environment
-
-To develop an agent for a specific domain, you first need to understand the domain's policy and available tools. Start by running the environment server for your target domain:
-
-```bash
-tau2 domain <domain>
-```
-
-This will start a server and automatically open your browser to the API documentation page (ReDoc). Here you can:
-- Review the available tools (API endpoints) for the domain
-- Understand the policy requirements and constraints
-- Test API calls directly through the documentation interface
-
-## Testing Your Agent
-
-Run an eval with your agent using the CLI:
+## Understanding the environment
 
 ```bash
-tau2 run \
-  --domain <domain> \
-  --agent my_agent \
-  --agent-llm <llm_name> \
-  --user-llm <llm_name> \
-  ...
+tau2 domain airline
 ```
 
-See `tau2 run --help` or `docs/cli-reference.md` for the full list of options.
+prints the agent policy and a table of the airline tools (name, read/write
+type, description, parameters). `make env-cli` lets you query the tools
+interactively.
+
+## Testing your agent
+
+```bash
+tau2 run --agent my_agent --agent-llm <model> --user-llm <model> --num-tasks 5
+```
+
+See `tau2 run --help` or [`docs/cli-reference.md`](../../../docs/cli-reference.md)
+for all options, and [`docs/running_simulations.md`](../../../docs/running_simulations.md)
+to run an unregistered agent from Python.

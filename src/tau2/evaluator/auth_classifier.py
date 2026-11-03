@@ -15,8 +15,8 @@ from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 
-from tau2.config import DEFAULT_LLM_EVAL_USER_SIMULATOR
-from tau2.data_model.message import SystemMessage, Tick, UserMessage
+from tau2.config import DEFAULT_LLM_REVIEW, DEFAULT_LLM_REVIEW_ARGS
+from tau2.data_model.message import SystemMessage, UserMessage
 from tau2.data_model.simulation import AuthenticationClassification
 from tau2.utils.display import MarkdownDisplay
 from tau2.utils.llm_utils import generate
@@ -116,7 +116,7 @@ class AuthenticationClassifier:
     @staticmethod
     def classify(
         messages: list,
-        model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+        model: str = DEFAULT_LLM_REVIEW,
     ) -> AuthenticationClassification:
         """
         Classify authentication outcome for a turn-based conversation.
@@ -142,6 +142,7 @@ class AuthenticationClassifier:
                 UserMessage(role="user", content=user_prompt),
             ],
             call_name="classify_authentication",
+            **DEFAULT_LLM_REVIEW_ARGS,
         )
 
         # Parse response
@@ -152,55 +153,6 @@ class AuthenticationClassifier:
             reasoning=reasoning,
             cost=assistant_message.cost,
         )
-
-
-class FullDuplexAuthenticationClassifier:
-    """Classifier for user authentication outcomes in full-duplex conversations."""
-
-    @staticmethod
-    def classify(
-        ticks: list[Tick],
-        model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
-    ) -> AuthenticationClassification:
-        """
-        Classify authentication outcome for a full-duplex conversation.
-
-        Args:
-            ticks: List of conversation ticks.
-            model: LLM model to use for classification.
-
-        Returns:
-            AuthenticationClassification with status, reasoning, and cost.
-        """
-        # Format conversation - use consolidated view for readability
-        conversation = MarkdownDisplay.display_ticks_consolidated(ticks)
-
-        # Build prompt
-        user_prompt = USER_PROMPT.format(conversation=conversation)
-
-        # Call LLM
-        assistant_message = generate(
-            model=model,
-            messages=[
-                SystemMessage(role="system", content=SYSTEM_PROMPT),
-                UserMessage(role="user", content=user_prompt),
-            ],
-            call_name="classify_authentication",
-        )
-
-        # Parse response
-        status, reasoning = _parse_classification_response(assistant_message.content)
-
-        return AuthenticationClassification(
-            status=status,
-            reasoning=reasoning,
-            cost=assistant_message.cost,
-        )
-
-
-# =============================================================================
-# Display Functions
-# =============================================================================
 
 
 def display_auth_classification(

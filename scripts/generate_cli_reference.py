@@ -1,7 +1,7 @@
 """Regenerate docs/cli-reference.md from the `tau2` CLI's own --help output.
 
 Usage:
-    uv run --frozen python scripts/generate_cli_reference.py
+    UV_FROZEN=1 uv run python scripts/generate_cli_reference.py
 """
 
 import argparse
@@ -10,8 +10,6 @@ import sys
 from pathlib import Path
 
 OUTPUT = Path(__file__).resolve().parents[1] / "docs" / "cli-reference.md"
-# Command groups whose subcommands are collapsed: authoring tools, not run tools.
-COLLAPSED = {"factory"}
 
 HEADER = """# CLI reference
 
@@ -21,13 +19,13 @@ This page is the `--help` output of every `tau2` command, generated from the
 CLI. Regenerate it after changing any option:
 
 ```bash
-uv run --frozen python scripts/generate_cli_reference.py
+UV_FROZEN=1 uv run python scripts/generate_cli_reference.py
 ```
 
-For how the commands fit together, see
-[Running the benchmark](running-the-benchmark.md) and the
-[submission guide](leaderboard-submission.md). Terms are defined in the
-[glossary](glossary.md). `tau2 intro` prints a short overview in the terminal.
+For a walkthrough, see [Getting started](getting-started.md) and
+[Running simulations](running_simulations.md). Running `tau2` with no command
+(or `tau2 intro`) prints a short overview in the terminal. The CLI covers the
+airline domain in text (turn-based) mode only.
 
 ## Commands
 
@@ -79,20 +77,12 @@ def help_block(path: list[str], parser: argparse.ArgumentParser, level: int) -> 
 def render() -> str:
     """The full markdown page."""
     root = capture_parser()
-    rows, sections = [], []
+    rows, sections = [], [help_block(["tau2"], root, 2)]
     for name, description, sub in subcommands(root):
         rows.append(f"| [`tau2 {name}`](#tau2-{name}) | {description} |")
         sections.append(help_block(["tau2", name], sub, 2))
-        children = list(subcommands(sub))
-        if name in COLLAPSED and children:
-            sections.append(
-                f"<details>\n<summary>{len(children)} <code>tau2 {name}</code> "
-                "subcommands</summary>\n"
-            )
-        for child, _, child_parser in children:
+        for child, _, child_parser in subcommands(sub):
             sections.append(help_block(["tau2", name, child], child_parser, 3))
-        if name in COLLAPSED and children:
-            sections.append("</details>\n")
     return HEADER + "\n".join(rows) + "\n\n" + "\n".join(sections)
 
 

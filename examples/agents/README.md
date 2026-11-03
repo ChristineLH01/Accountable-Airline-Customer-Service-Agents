@@ -6,7 +6,7 @@ Runnable examples showing how to create and evaluate custom tau2 agents.
 
 ### `minimal_text_agent.py` -- Start here
 
-A single-file example that creates a minimal agent, registers it, and runs it against the mock domain. Shows:
+A single-file example that creates a minimal agent, registers it, and runs it on an airline task. Shows:
 
 - Implementing `HalfDuplexAgent` (the two required methods)
 - Writing a factory function

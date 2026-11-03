@@ -1,178 +1,90 @@
 # Orchestrator Module
 
-This module provides orchestrators for managing simulations between agents, users, and environments. Each orchestrator offers different communication patterns and capabilities.
+`Orchestrator` (`orchestrator.py`) runs one simulation: it passes messages
+between the agent, the user simulator and the environment in turns, executes
+tool calls, enforces the termination limits and returns a `SimulationRun`.
+It is the only orchestrator; communication is always turn-based
+(half-duplex).
 
-## Overview
-
-| Orchestrator | Communication Mode | Tool Execution | Participant Interface | Primary Use Case |
-|--------------|-------------------|----------------|----------------------|------------------|
-| `Orchestrator` | Half-duplex (turn-based) | Synchronous | `generate_next_message()` | Standard benchmarking |
-| `FullDuplexOrchestrator` | Full-duplex (streaming) | Synchronous | `get_next_chunk()` | Real-time streaming |
-
----
-
-## 1. Orchestrator (Half-Duplex)
-
-The standard orchestrator for turn-based communication.
-
-### Communication Pattern
+## Communication pattern
 
 ```
 Agent ──message──> User ──message──> Agent ──tool_call──> Environment ──result──> Agent
 ```
 
-Each participant takes turns sending complete messages. Only one party "speaks" at a time.
+Each step sends the current message from one role to another:
 
-### Participant Interface
+| From → To | What happens |
+|-----------|--------------|
+| Agent/Env → User | `user.generate_next_message()`; a tool call goes to the environment, text goes to the agent |
+| User/Env → Agent | `agent.generate_next_message()`; a tool call goes to the environment, text goes to the user |
+| Agent/User → Env | Each tool call runs synchronously via `environment.get_response()`; several results are wrapped in a `MultiToolMessage` and returned to the caller |
 
-```python
-class MyAgent(HalfDuplexAgent):
-    def generate_next_message(
-        self, 
-        message: ValidAgentInputMessage, 
-        state: AgentState
-    ) -> tuple[AssistantMessage, AgentState]:
-        """Generate a complete response to the incoming message."""
-        ...
-```
+A message carries either text or tool calls, never both.
 
-### Tool Execution
+## Starting a conversation
 
-- **Synchronous**: Tool calls block until complete
-- **Immediate**: Results returned in the same step
+Without `task.initial_state.message_history`, the agent opens with
+`"Hi! How can I help you today?"`, or with `task.agent_opener` when the task
+sets one. Otherwise the environment is initialized from
+`initialization_data`, `initialization_actions` and the message history, and
+the conversation resumes from the last message. Seeds are set on both
+participants with `set_seed()` before the first turn.
 
-### Trajectory Structure
+## Termination
 
-```python
-trajectory: list[Message]  # Flat list of messages
-```
+| Condition | `TerminationReason` |
+|-----------|---------------------|
+| User message contains `###STOP###`, `###TRANSFER###` or `###OUT-OF-SCOPE###` | `USER_STOP` |
+| `agent.is_stop(message)` is true | `AGENT_STOP` |
+| `max_steps` steps taken | `MAX_STEPS` |
+| `max_errors` tool calls returned errors | `TOO_MANY_ERRORS` |
+| `timeout` seconds elapsed | `TIMEOUT` |
+| Message with both text and tool calls, with `validate_communication=True` | `AGENT_ERROR` / `USER_ERROR` |
 
-### Compatible Classes
+An empty message (no text, no tool calls) always raises `ValueError` from
+`message.validate()`. Step, error and timeout limits are not checked while a
+tool call is pending.
+Only `USER_STOP` and `AGENT_STOP` are scored; any other reason gives reward 0
+(see `docs/evaluation.md`).
 
-| Role | Classes |
-|------|---------|
-| Agent | `LLMAgent`, `LLMGTAgent`, `LLMSoloAgent` |
-| User | `UserSimulator`, `DummyUser` |
-
-### Usage
+## Usage
 
 ```python
 from tau2.orchestrator.orchestrator import Orchestrator
 
 orchestrator = Orchestrator(
     domain="airline",
-    agent=LLMAgent(tools=tools, domain_policy=policy, llm="gpt-4"),
-    user=UserSimulator(llm="gpt-4", instructions=instructions, tools=user_tools),
+    agent=agent,  # any HalfDuplexAgent, e.g. LLMAgent
+    user=user,  # any HalfDuplexUser, e.g. UserSimulator
     environment=environment,
     task=task,
-    max_steps=100,
+    max_steps=200,
+    max_errors=10,
     seed=42,
+    validate_communication=False,
+    timeout=None,
 )
-result = orchestrator.run()
+simulation = orchestrator.run()  # SimulationRun, without reward_info
 ```
 
----
+`orchestrator.run()` does not score the simulation. Use
+`tau2.runner.run_simulation(orchestrator)` to run and evaluate in one call, or
+`tau2.runner.build_orchestrator(config, task)` to build an orchestrator from a
+`RunConfig` (see `docs/running_simulations.md`). The constructor defaults are
+`max_steps=100` and `max_errors=10`; `RunConfig` and the CLI default to
+`max_steps=200`.
 
-## 2. FullDuplexOrchestrator
+## Trajectory
 
-Orchestrator for real-time streaming communication where both parties can "speak" simultaneously.
+`SimulationRun.messages` is a flat `list[Message]` (`AssistantMessage`,
+`UserMessage`, `ToolMessage`), sorted by timestamp, with `turn_idx` set on
+each message. Agent and user costs are summed from the messages into
+`agent_cost` and `user_cost`.
 
-### Communication Pattern
-
-```
-     Tick 0          Tick 1          Tick 2
-Agent: [chunk0] ───> [chunk1] ───> [chunk2] ───>
-User:  [chunk0] ───> [chunk1] ───> [chunk2] ───>
-```
-
-Both agent and user generate chunks each tick. Chunks can overlap (simultaneous speech).
-
-### Participant Interface
-
-```python
-class MyStreamingAgent(FullDuplexAgent):
-    def get_next_chunk(
-        self,
-        state: StreamingState,
-        participant_chunk: Optional[Message] = None,
-        tool_results: Optional[EnvironmentMessage] = None,
-    ) -> tuple[AssistantMessage, StreamingState]:
-        """Generate the next chunk based on incoming chunk and tool results."""
-        ...
-```
-
-### Tool Execution
-
-- **Synchronous**: Tool calls block and execute immediately
-- **Within tick**: Results returned before tick completes
-
-### Trajectory Structure
-
-```python
-ticks: list[Tick]  # Tick-grouped events
-
-class Tick(BaseModel):
-    tick_id: int
-    timestamp: str
-    agent_chunk: Optional[AssistantMessage] = None
-    user_chunk: Optional[UserMessage] = None
-    agent_tool_calls: list[ToolCall] = []
-    user_tool_calls: list[ToolCall] = []
-    agent_tool_results: list[ToolMessage] = []
-    user_tool_results: list[ToolMessage] = []
-    user_transcript: Optional[str] = None
-    tick_duration_seconds: Optional[float] = None     # Configured tick duration
-    wall_clock_duration_seconds: Optional[float] = None  # Actual wall clock time
-```
-
-### Compatible Classes
+## Compatible classes
 
 | Role | Classes |
 |------|---------|
-| Agent | `DiscreteTimeAudioNativeAgent` |
-| User | `VoiceStreamingUserSimulator` |
-
-### Usage
-
-```python
-from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
-
-orchestrator = FullDuplexOrchestrator(
-    domain="airline",
-    agent=DiscreteTimeAudioNativeAgent(tools=tools, domain_policy=policy, tick_duration_ms=1000, provider="openai"),
-    user=VoiceStreamingUserSimulator(tools=user_tools, instructions=instructions, llm="gpt-4"),
-    environment=environment,
-    task=task,
-    tick_duration_seconds=0.1,  # Optional: real-time pacing
-)
-result = orchestrator.run()
-```
-
----
-
-## Choosing the Right Orchestrator
-
-| Scenario | Recommended Orchestrator |
-|----------|-------------------------|
-| Standard benchmarking, simple evaluation | `Orchestrator` |
-| Real-time voice/streaming demo | `FullDuplexOrchestrator` |
-
----
-
-## Output Types Comparison
-
-| Orchestrator | Participant Output | Tool Calls |
-|--------------|-------------------|------------|
-| `Orchestrator` | `Message` | Embedded in message (`msg.tool_calls`) |
-| `FullDuplexOrchestrator` | `Message` | Embedded in message |
-
----
-
-## Migration Guide
-
-### From `Orchestrator` to `FullDuplexOrchestrator`
-
-1. Replace `LLMAgent` with `DiscreteTimeAudioNativeAgent`
-2. Replace `UserSimulator` with `VoiceStreamingUserSimulator`
-3. Configure the agent with provider, tick duration, etc. via its constructor (when using the orchestrator directly) or via `AudioNativeConfig` (when using the runner/CLI)
-
+| Agent | `LLMAgent`, `LLMGTAgent` (`tau2/agent/llm_agent.py`), or any `HalfDuplexAgent` |
+| User | `UserSimulator` (`tau2/user/user_simulator.py`), or any `HalfDuplexUser` |

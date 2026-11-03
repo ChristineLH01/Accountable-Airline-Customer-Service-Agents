@@ -3,7 +3,7 @@ from typing import Callable
 
 import pytest
 
-from tau2.agent.llm_agent import LLMAgent, LLMSoloAgent
+from tau2.agent.llm_agent import LLMAgent
 from tau2.data_model.message import AssistantMessage, UserMessage
 from tau2.data_model.tasks import EnvAssertion, InitialState, Task
 from tau2.environment.environment import Environment
@@ -12,21 +12,16 @@ from tau2.orchestrator.orchestrator import (
     Orchestrator,
     Role,
 )
-from tau2.user.user_simulator import DummyUser, UserSimulator
+from tau2.user.user_simulator import UserSimulator
 
 
 @pytest.fixture
 def user_simulator() -> UserSimulator:
     return UserSimulator(
         instructions="You are a user simulator.",
-        llm="gpt-3.5-turbo",
-        llm_args={"temperature": 0.0},
+        llm="openai/gpt-6.1-sol",
+        llm_args={"reasoning_effort": "low"},
     )
-
-
-@pytest.fixture
-def dummy_user() -> DummyUser:
-    return DummyUser()
 
 
 @pytest.fixture
@@ -35,22 +30,8 @@ def agent(get_environment: Callable[[], Environment]) -> LLMAgent:
     return LLMAgent(
         tools=environment.get_tools(),
         domain_policy=environment.get_policy(),
-        llm="gpt-3.5-turbo",
-        llm_args={"temperature": 0.0},
-    )
-
-
-@pytest.fixture
-def solo_agent(
-    get_environment: Callable[[], Environment], base_task: Task
-) -> LLMSoloAgent:
-    environment = get_environment()
-    return LLMSoloAgent(
-        tools=environment.get_tools(),
-        domain_policy=environment.get_policy(),
-        task=base_task,
-        llm="gpt-3.5-turbo",
-        llm_args={"temperature": 0.0},
+        llm="openai/gpt-6.1-sol",
+        llm_args={"reasoning_effort": "low"},
     )
 
 
@@ -350,35 +331,6 @@ def test_orchestrator_run(
     )
     simulation_run = orchestrator.run()
     assert simulation_run is not None
-
-
-@pytest.mark.live_api
-def test_orchestrator_run_with_solo_agent(
-    domain_name: str,
-    dummy_user: DummyUser,
-    solo_agent: LLMSoloAgent,
-    base_task: Task,
-    get_environment: Callable[[], Environment],
-):
-    orchestrator = Orchestrator(
-        domain=domain_name,
-        environment=get_environment(solo_mode=True),
-        user=dummy_user,
-        agent=solo_agent,
-        task=base_task,
-        max_steps=10,
-        solo_mode=True,
-    )
-    simulation_run = orchestrator.run()
-    assert simulation_run is not None
-
-    orchestrator.environment.run_env_assertion(
-        EnvAssertion(
-            env_type="assistant",
-            func_name="assert_task_status",
-            arguments={"task_id": "task_2", "expected_status": "pending"},
-        )
-    )
 
 
 def test_validate_communication_default_is_false(

@@ -19,8 +19,8 @@ Usage:
     # With custom output path
     python -m tau2.scripts.review_conversation results.json -o review.json
 
-    # With a custom LiteLLM-compatible review model
-    python -m tau2.scripts.review_conversation results.json --review-model gpt-4.1
+    # With a custom review model (an OpenRouter model ID)
+    python -m tau2.scripts.review_conversation results.json --review-model anthropic/claude-opus-4.5
 """
 
 import argparse
@@ -38,15 +38,16 @@ from rich.markdown import Markdown
 from rich.progress import Progress
 from rich.table import Table
 
-from tau2.config import DEFAULT_LLM_EVAL_USER_SIMULATOR
+from tau2.config import DEFAULT_LLM_REVIEW
 from tau2.data_model.simulation import (
     AuthenticationClassification,
     Results,
     Review,
     SimulationRun,
+    UserInfo,
     UserOnlyReview,
 )
-from tau2.data_model.tasks import StructuredUserInstructions, Task
+from tau2.data_model.tasks import Task
 from tau2.evaluator.auth_classifier import display_auth_classification
 from tau2.evaluator.review_llm_judge_user_only import UserOnlyReviewer
 from tau2.evaluator.reviewer import ReviewMode, review_simulation
@@ -155,54 +156,48 @@ class UserReviewOutput(BaseModel):
 # =============================================================================
 
 
-def is_full_duplex(simulation: SimulationRun) -> bool:
-    """Check if the simulation used full-duplex mode (has ticks)."""
-    return simulation.ticks is not None and len(simulation.ticks) > 0
-
-
 def get_full_trajectory_string(simulation: SimulationRun) -> str:
     """Get the full conversation trajectory as a formatted string."""
-    if is_full_duplex(simulation):
-        return MarkdownDisplay.display_ticks_consolidated(
-            simulation.ticks,
-            effect_timeline=simulation.effect_timeline,
-        )
-    else:
-        return MarkdownDisplay.display_messages(simulation.messages)
+    return MarkdownDisplay.display_messages(simulation.messages)
 
 
 def get_user_visible_trajectory_string(simulation: SimulationRun) -> str:
     """Get the user-visible trajectory as a formatted string."""
-    if is_full_duplex(simulation):
-        return MarkdownDisplay.display_ticks_consolidated(
-            simulation.ticks,
-            user_visible_only=True,
-            effect_timeline=simulation.effect_timeline,
-        )
-    else:
-        messages = UserOnlyReviewer.make_user_visible_trajectory(simulation.messages)
-        return MarkdownDisplay.display_messages(messages)
+    messages = UserOnlyReviewer.make_user_visible_trajectory(simulation.messages)
+    return MarkdownDisplay.display_messages(messages)
 
 
-def _recorded_review_task(
-    simulation: SimulationRun, task: Task, results: Results
-) -> Task:
-    """Restore an elicitation caller's recorded instruction for post-hoc review.
+def recorded_review_user_info(
+    results: Results, simulation: SimulationRun, task: Task
+) -> UserInfo:
+    """The caller guidelines and persona a saved simulation was run with.
 
-    Saved tasks omit per-call complications. Read the saved stimulus verbatim;
-    current catalogs, prompts, and domain registrations do not describe a past
-    call. Prompt-silent pronunciation stimuli remain provenance only.
+    Results that recorded run-wide guidelines are reviewed with them. Otherwise
+    the guidelines are re-rendered with the simulation's recorded persona (or,
+    for results without one, the persona the run would assign to the task).
     """
-    stimulus = simulation.complication
-    if results.info.elicitation is None or stimulus is None or not stimulus.injected:
-        return task
-    prompted = task.model_copy(deep=True)
-    instructions = prompted.user_scenario.instructions
-    if isinstance(instructions, StructuredUserInstructions):
-        instructions.task_instructions += f"\n\n{stimulus.line}"
-    else:
-        prompted.user_scenario.instructions = f"{instructions}\n\n{stimulus.line}"
-    return prompted
+    from tau2.registry import registry
+    from tau2.runner.batch import review_user_info
+    from tau2.runner.build import user_tools_for_task
+    from tau2.user.personas import assign_user_persona, get_user_persona
+
+    info = results.info
+    if info.user_info.global_simulation_guidelines:
+        return info.user_info
+    domain = info.environment_info.domain_name
+    persona = (
+        get_user_persona(domain, simulation.user_persona)
+        if simulation.user_persona
+        else assign_user_persona(domain, task.id, info.seed)
+    )
+    environment = registry.get_env_constructor(domain)()
+    return review_user_info(
+        info.user_info.implementation,
+        info.user_info.llm,
+        info.user_info.llm_args,
+        persona,
+        use_tools=user_tools_for_task(environment, task) is not None,
+    )
 
 
 # =============================================================================
@@ -214,8 +209,7 @@ def review_simulation_full(
     simulation: SimulationRun,
     task: Task,
     results: Results,
-    interruption_enabled: bool = False,
-    review_model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    review_model: str = DEFAULT_LLM_REVIEW,
 ) -> tuple[Review, AuthenticationClassification, str]:
     """
     Review a single simulation for both agent and user errors, plus auth classification.
@@ -226,19 +220,12 @@ def review_simulation_full(
     if not results.info or not results.info.user_info:
         raise ValueError("results.info.user_info is required for review")
 
-    from tau2.multilingual.runtime import recorded_review_user_info
-
-    user_info = recorded_review_user_info(
-        results.info, task, context=simulation.language_context
-    )
+    user_info = recorded_review_user_info(results, simulation, task)
     policy = (
         results.info.environment_info.policy if results.info.environment_info else None
     )
-    if results.info.elicitation is not None and simulation.policy is not None:
-        policy = simulation.policy
     if not policy:
         raise ValueError("A recorded agent policy is required for full review")
-    task = _recorded_review_task(simulation, task, results)
     trajectory = get_full_trajectory_string(simulation)
 
     review, auth_classification = review_simulation(
@@ -247,7 +234,6 @@ def review_simulation_full(
         mode=ReviewMode.FULL,
         user_info=user_info,
         policy=policy,
-        interruption_enabled=interruption_enabled,
         review_model=review_model,
     )
 
@@ -261,10 +247,9 @@ def review_simulation_full(
 def run_full_review(
     results: Results,
     results_path: str,
-    interruption_enabled: bool = False,
     show_details: bool = False,
     max_concurrency: int = 32,
-    review_model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    review_model: str = DEFAULT_LLM_REVIEW,
     console: Optional[Console] = None,
 ) -> FullReviewOutput:
     """Run full review (agent + user) for all simulations."""
@@ -306,7 +291,6 @@ def run_full_review(
                 simulation=simulation,
                 task=task,
                 results=results,
-                interruption_enabled=interruption_enabled,
                 review_model=review_model,
             )
 
@@ -451,8 +435,7 @@ def review_simulation_user(
     simulation: SimulationRun,
     task: Task,
     results: Results,
-    interruption_enabled: bool = False,
-    review_model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    review_model: str = DEFAULT_LLM_REVIEW,
 ) -> tuple[UserOnlyReview, str]:
     """
     Review a single simulation for user simulator errors only.
@@ -463,12 +446,7 @@ def review_simulation_user(
     if not results.info or not results.info.user_info:
         raise ValueError("results.info.user_info is required for review")
 
-    from tau2.multilingual.runtime import recorded_review_user_info
-
-    user_info = recorded_review_user_info(
-        results.info, task, context=simulation.language_context
-    )
-    task = _recorded_review_task(simulation, task, results)
+    user_info = recorded_review_user_info(results, simulation, task)
     trajectory = get_user_visible_trajectory_string(simulation)
 
     review, _ = review_simulation(
@@ -476,7 +454,6 @@ def review_simulation_user(
         task=task,
         mode=ReviewMode.USER,
         user_info=user_info,
-        interruption_enabled=interruption_enabled,
         review_model=review_model,
     )
 
@@ -489,10 +466,9 @@ def review_simulation_user(
 def run_user_review(
     results: Results,
     results_path: str,
-    interruption_enabled: bool = False,
     show_details: bool = False,
     max_concurrency: int = 32,
-    review_model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    review_model: str = DEFAULT_LLM_REVIEW,
     console: Optional[Console] = None,
 ) -> UserReviewOutput:
     """Run user simulator review for all simulations."""
@@ -527,7 +503,6 @@ def run_user_review(
                 simulation=simulation,
                 task=task,
                 results=results,
-                interruption_enabled=interruption_enabled,
                 review_model=review_model,
             )
 
@@ -638,13 +613,12 @@ def review(
     results_path: str,
     mode: ReviewMode = ReviewMode.FULL,
     output_path: Optional[str] = None,
-    interruption_enabled: bool = False,
     show_details: bool = False,
     max_concurrency: int = 32,
     limit: Optional[int] = None,
     task_ids: Optional[list[str]] = None,
     log_llm: bool = False,
-    review_model: str = DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    review_model: str = DEFAULT_LLM_REVIEW,
 ) -> Optional[Union[FullReviewOutput, UserReviewOutput]]:
     """
     Review conversation trajectories for all simulations in a results file.
@@ -653,7 +627,6 @@ def review(
         results_path: Path to the results.json file.
         mode: Review mode ("full" for agent+user, "user" for user only).
         output_path: Optional path to save the review output.
-        interruption_enabled: Whether interruption was enabled for these simulations.
         show_details: Whether to show detailed results for each simulation.
         max_concurrency: Maximum number of concurrent reviews.
         limit: Optional limit on number of simulations to review.
@@ -718,7 +691,6 @@ def review(
         output = run_full_review(
             results=results,
             results_path=results_path,
-            interruption_enabled=interruption_enabled,
             show_details=show_details,
             max_concurrency=max_concurrency,
             review_model=review_model,
@@ -728,7 +700,6 @@ def review(
         output = run_user_review(
             results=results,
             results_path=results_path,
-            interruption_enabled=interruption_enabled,
             show_details=show_details,
             max_concurrency=max_concurrency,
             review_model=review_model,
@@ -1066,11 +1037,8 @@ Examples:
   # With detailed output for each simulation
   python -m tau2.scripts.review_conversation run results.json --show-details
 
-  # For full-duplex simulations with interruption
-  python -m tau2.scripts.review_conversation run results.json --interruption-enabled
-
-  # Use a different LiteLLM-compatible review model
-  python -m tau2.scripts.review_conversation run results.json --review-model gpt-4.1
+  # Use a different review model (an OpenRouter model ID)
+  python -m tau2.scripts.review_conversation run results.json --review-model anthropic/claude-opus-4.5
         """,
     )
     run_parser.add_argument(
@@ -1094,11 +1062,6 @@ Examples:
         help="Output path for the review JSON. Defaults to <input>_<mode>_review.json.",
     )
     run_parser.add_argument(
-        "--interruption-enabled",
-        action="store_true",
-        help="Flag indicating that interruption was enabled for these simulations.",
-    )
-    run_parser.add_argument(
         "--show-details",
         action="store_true",
         help="Show detailed review results for each simulation.",
@@ -1119,8 +1082,8 @@ Examples:
     run_parser.add_argument(
         "--review-model",
         type=str,
-        default=DEFAULT_LLM_EVAL_USER_SIMULATOR,
-        help=f"LLM model to use for review calls. Default is {DEFAULT_LLM_EVAL_USER_SIMULATOR}.",
+        default=DEFAULT_LLM_REVIEW,
+        help=f"LLM model to use for review calls. Default is {DEFAULT_LLM_REVIEW}.",
     )
 
     # Display subcommand
@@ -1254,7 +1217,6 @@ def main():
                 results_path=str(results_file),
                 mode=mode,
                 output_path=args.output if len(results_files) == 1 else None,
-                interruption_enabled=args.interruption_enabled,
                 show_details=args.show_details,
                 max_concurrency=args.max_concurrency,
                 review_model=args.review_model,

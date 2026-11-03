@@ -1,286 +1,307 @@
 # Running Simulations
 
-This guide covers the `tau2.runner` API for running simulations at different levels of control. Whether you want a one-liner CLI command or full programmatic control over every component, the runner framework has you covered.
+This guide covers the `tau2.runner` API for running airline simulations at
+different levels of control, from a single CLI command to wiring every
+component yourself.
 
-## Architecture Overview
+## Architecture overview
 
-The runner framework is organized into three layers:
+The runner is organized into three layers:
 
 | Layer | Module | Purpose |
 |-------|--------|---------|
-| **Layer 1** | `runner.simulation` | Execute a pre-built orchestrator. No registry, no config. |
-| **Layer 2** | `runner.build` | Build instances (environment, agent, user, orchestrator) from names/config via the registry. |
-| **Layer 3** | `runner.batch` | Batch execution with concurrency, checkpointing, retries, logging, and side effects. |
+| **Layer 1** | `tau2.runner.simulation` | Execute a pre-built `Orchestrator` and evaluate it. No registry, no config. |
+| **Layer 2** | `tau2.runner.build` | Build the environment, agent, user and orchestrator from registered names or a `RunConfig`. |
+| **Layer 3** | `tau2.runner.batch` | Batch execution with concurrency, checkpointing, retries, logging and optional auto-review. |
 
-Each layer builds on the one below it, but you can enter at any level depending on your needs.
+Each layer builds on the one below it; you can enter at any level. Everything
+is also importable from `tau2.run` and `tau2.runner`.
 
 ---
 
-## Level 1: CLI (Simplest)
-
-The fastest way to run simulations is through the `tau2 run` command:
+## Level 1: CLI
 
 ```bash
-# Run all airline tasks with GPT-4.1
-tau2 run --domain airline --agent llm_agent --agent-llm openai/gpt-4.1
+# All 50 airline tasks with the default models
+tau2 run
 
-# Run specific tasks with multiple trials
-tau2 run --domain retail --agent llm_agent --agent-llm openai/gpt-4.1 \
-    --task-ids 0 1 --num-trials 3
+# Specific tasks, three trials each
+tau2 run --agent-llm openai/gpt-6.1-sol --user-llm openai/gpt-6.1-sol --task-ids 0 1 --num-trials 3
 
-# Run with concurrency and auto-resume
-tau2 run --domain telecom --agent llm_agent --agent-llm openai/gpt-4.1 \
-    --max-concurrency 4 --auto-resume
+# More concurrency, named output, resume without prompting
+tau2 run --max-concurrency 8 --save-to my_run --auto-resume
 ```
 
-See `tau2 run --help` or [CLI Reference](cli-reference.md) for all options.
+See `tau2 run --help` or the [CLI reference](cli-reference.md) for all
+options.
 
 ---
 
-## Level 2: Config-Based Python API (Intermediate)
+## Level 2: Config-based Python API
 
-For programmatic use, create a `TextRunConfig` (for text/half-duplex) or `VoiceRunConfig` (for voice/full-duplex) and call `run_domain()`:
-
-### Text (half-duplex) simulations
+Describe a run with `RunConfig` (`tau2.data_model.simulation.RunConfig`, also
+exported as `tau2.RunConfig`) and pass it to `run_domain()`:
 
 ```python
-from tau2 import TextRunConfig
+from tau2 import RunConfig
+from tau2.metrics.agent_metrics import compute_metrics
 from tau2.runner import run_domain
 
-config = TextRunConfig(
+config = RunConfig(
     domain="airline",
     agent="llm_agent",
-    llm_agent="openai/gpt-4.1",
-    llm_user="openai/gpt-4.1-mini",
+    llm_agent="openai/gpt-6.1-sol",
+    llm_user="openai/gpt-6.1-sol",
+    num_tasks=5,
     num_trials=3,
     max_concurrency=4,
     seed=42,
 )
 
-results = run_domain(config)
-# compute_metrics() returns an AgentMetrics object with avg_reward, pass_hat_ks, etc.
-from tau2.metrics.agent_metrics import compute_metrics
+results = run_domain(config)  # also prints the metrics table
 metrics = compute_metrics(results)
 print(f"Average reward: {metrics.avg_reward}")
+print(f"pass^k: {metrics.pass_hat_ks}")
 ```
 
-### Voice (full-duplex) simulations
+`run_domain()` loads and filters the tasks, saves to
+`data/simulations/<save_to or auto name>/results.json`, runs the batch and
+displays the metrics.
+
+`RunConfig` fields (defaults from [`src/tau2/config.py`](../src/tau2/config.py)):
+
+| Group | Fields |
+|-------|--------|
+| Tasks | `domain="airline"`, `task_set_name=None` (the domain's task set), `task_split_name="base"`, `task_ids=None`, `num_tasks=None` |
+| Agent | `agent="llm_agent"`, `llm_agent="openai/gpt-6.1-sol"`, `llm_args_agent={"reasoning_effort": "medium"}` |
+| User simulator | `user="user_simulator"`, `llm_user="openai/gpt-6.1-sol"`, `llm_args_user={"reasoning_effort": "low"}` |
+| Scoring | `communicate_scoring=CommunicateScoring()` (semantic judge; see [evaluation](evaluation.md#communication-checks)) |
+| Execution | `num_trials=1`, `max_steps=200`, `max_errors=10`, `timeout=None`, `enforce_communication_protocol=False`, `max_concurrency=3`, `seed=300`, `max_retries=3`, `retry_delay=1.0`, `auto_resume=False` |
+| Logging | `log_level="ERROR"`, `verbose_logs=False` |
+| Review | `auto_review=False`, `review_mode="full"`, `review_model="openai/gpt-6-luna"` |
+| Output | `save_to=None` (a directory name under `data/simulations/`) |
+
+To score communicate-info with substring matching instead of the LLM judge:
 
 ```python
-from tau2 import VoiceRunConfig
-from tau2.data_model.simulation import AudioNativeConfig
-from tau2.runner import run_domain
+from tau2.data_model.semantic_communication import CommunicateScorer, CommunicateScoring
 
-config = VoiceRunConfig(
-    domain="airline",
-    audio_native_config=AudioNativeConfig(
-        provider="openai",
-        model="gpt-4o-realtime-preview",
-    ),
-    llm_user="openai/gpt-4.1",
-    speech_complexity="regular",
+config = RunConfig(
+    communicate_scoring=CommunicateScoring(scorer=CommunicateScorer.SUBSTRING),
 )
-
-results = run_domain(config)
 ```
-
-### Knowledge retrieval simulations
-
-```python
-from tau2 import TextRunConfig
-from tau2.runner import run_domain
-
-config = TextRunConfig(
-    domain="banking_knowledge",
-    agent="llm_agent",
-    llm_agent="openai/gpt-4.1",
-    llm_user="openai/gpt-4.1",
-    retrieval_config="alltools",  # or "bm25", "openai_embeddings", "terminal_use", etc.
-    num_trials=3,
-)
-
-results = run_domain(config)
-```
-
-Both types share a common `BaseRunConfig` with fields like `domain`, `num_trials`, `seed`, `hallucination_retries`, etc. The `RunConfig` type alias is `Union[TextRunConfig, VoiceRunConfig]`.
-
-This handles everything: task loading, filtering, concurrency, checkpointing, metrics display.
 
 ### Running specific tasks
 
 ```python
 from pathlib import Path
-from tau2 import TextRunConfig
+
+from tau2 import RunConfig
 from tau2.runner import get_tasks, run_tasks
 
-config = TextRunConfig(
-    domain="airline",
-    agent="llm_agent",
-    llm_agent="openai/gpt-4.1",
-)
+config = RunConfig(llm_agent="openai/gpt-6.1-sol")
 
-# Load and filter tasks manually
 tasks = get_tasks("airline", task_ids=["0", "1"])
 
-# Run with custom save path
 results = run_tasks(
     config,
     tasks,
-    save_path=Path("my_results/results.json"),
-    save_dir=Path("my_results/"),
+    save_path=Path("my_results/results.json"),  # None: do not persist
+    save_dir=Path("my_results/"),  # per-task logs with verbose_logs=True
 )
 ```
 
 ### Running a single task
 
 ```python
-from tau2 import TextRunConfig
-from tau2.runner import run_single_task, get_tasks
+from tau2 import RunConfig
+from tau2.runner import get_tasks, run_single_task
 
-config = TextRunConfig(domain="airline", agent="llm_agent", llm_agent="openai/gpt-4.1")
-tasks = get_tasks("airline")
+config = RunConfig(llm_agent="openai/gpt-6.1-sol")
+task = get_tasks("airline", task_ids=["0"])[0]
 
-result = run_single_task(config, tasks[0], seed=42)
+result = run_single_task(config, task, seed=42)
 print(f"Task {result.task_id}: reward={result.reward_info.reward}")
 ```
 
+`run_single_task()` does not retry or write a results file; `run_tasks()`
+adds both.
+
 ---
 
-## Level 3: Instance-Based Python API (Power User)
+## Level 3: Instance-based Python API
 
-For maximum control, build instances yourself and use `run_simulation()`. This is ideal for:
-- Custom agents or environments not in the registry
-- Fine-grained control over agent/user construction
-- Testing and development
-- Integration into custom pipelines
+Build instances yourself and call `run_simulation()`. Use this for agents
+that are not registered, fine-grained control over construction, or
+embedding simulations in your own pipeline.
 
-### Using build helpers with the registry
+### Using the build helpers
 
 ```python
-from tau2.runner import (
-    build_environment,
-    build_agent,
-    build_user,
-    build_orchestrator,
-    run_simulation,
-    get_tasks,
-)
+from tau2 import RunConfig
 from tau2.evaluator.evaluator import EvaluationType
+from tau2.runner import (
+    build_agent,
+    build_environment,
+    build_orchestrator,
+    build_user,
+    get_tasks,
+    run_simulation,
+)
 
-# Load a task
-tasks = get_tasks("airline")
-task = tasks[0]
+task = get_tasks("airline", task_ids=["0"])[0]
 
-# Option A: Build orchestrator from config (uses registry)
-from tau2 import TextRunConfig
-config = TextRunConfig(domain="airline", agent="llm_agent", llm_agent="openai/gpt-4.1")
+# Option A: build the orchestrator from a config (uses the registry)
+config = RunConfig(llm_agent="openai/gpt-6.1-sol")
 orchestrator = build_orchestrator(config, task, seed=42)
 result = run_simulation(orchestrator, evaluation_type=EvaluationType.ALL)
 
-# Option B: Build components individually
+# Option B: build the components individually
 env = build_environment("airline")
-agent = build_agent("llm_agent", env, llm="openai/gpt-4.1")
-user = build_user("user_simulator", env, task, llm="openai/gpt-4.1-mini")
+agent = build_agent("llm_agent", env, llm="openai/gpt-6.1-sol", task=task)
+user = build_user("user_simulator", env, task, llm="openai/gpt-6.1-sol")
 ```
 
-### Fully custom instances (no registry needed)
+`build_orchestrator()` gives the user simulator the task's caller persona;
+`build_user()` does so only when you pass `persona_config` (see below).
+
+### Fully custom instances
 
 ```python
-from tau2.runner import run_simulation
 from tau2.orchestrator.orchestrator import Orchestrator
+from tau2.runner import build_environment, get_tasks, run_simulation
+from tau2.runner.build import agent_domain_policy
+from tau2.user.personas import assign_user_persona
 from tau2.user.user_simulator import UserSimulator
 
-# Your custom environment and agent
-env = MyCustomEnvironment()
-agent = MyCustomAgent(tools=env.get_tools(), domain_policy=env.get_policy())
+task = get_tasks("airline", task_ids=["0"])[0]
+env = build_environment("airline")
 
-# Standard user simulator
+# Your agent: any HalfDuplexAgent (see src/tau2/agent/README.md)
+agent = MyAgent(tools=env.get_tools(), domain_policy=agent_domain_policy(env))
+
 user = UserSimulator(
-    tools=env.get_user_tools(),
+    llm="openai/gpt-6.1-sol",
     instructions=str(task.user_scenario),
-    llm="openai/gpt-4.1-mini",
+    tools=None,  # airline has no user tools
+    persona_config=assign_user_persona("airline", task.id, seed=300),
 )
 
-# Wire everything into an orchestrator
 orchestrator = Orchestrator(
-    domain="my_domain",
+    domain="airline",
     agent=agent,
     user=user,
     environment=env,
     task=task,
-    max_steps=100,
+    max_steps=200,
     max_errors=10,
     seed=42,
 )
 
-# Run and evaluate
 result = run_simulation(orchestrator)
 print(f"Reward: {result.reward_info.reward}")
 ```
 
-### Audio-native (voice) simulations
+### Reproducing the τ-bench 2.0 prompts
+
+The registered builders reproduce the English airline prompts of τ-bench 2.0
+exactly; `tests/test_domains/test_airline/test_prompts_airline.py` pins them
+with a digest. Two pieces are added on top of the raw data, so keep them when
+you build instances yourself:
+
+- **Agent policy**: `agent_domain_policy(env)` returns
+  `data/tau2-airline/policy.md` plus `"\n\n"` plus
+  `AGENT_LANGUAGE_CLAUSE` (both in `tau2.runner.build`). Passing
+  `env.get_policy()` alone omits the clause.
+- **Caller persona**: the user simulator's system prompt is the scaffold in
+  `tau2.user.guidelines` with a persona from
+  `data/tau2-airline/user_personas.json` inserted. There are two
+  personas, `mamadou_diallo` (male) and `priya_patil` (female), chosen by
+  each task's caller gender; `assign_user_persona(domain, task_id, seed)`
+  picks it. Each `SimulationRun` records the persona ID in `user_persona`.
+
+### Evaluating a simulation separately
+
+`run_simulation()` already attaches `reward_info`. To re-score a
+`SimulationRun` (for example with a different `EvaluationType`):
 
 ```python
-from tau2.runner import build_voice_orchestrator, run_simulation, get_tasks
-from tau2 import VoiceRunConfig
-from tau2.data_model.simulation import AudioNativeConfig
+from tau2.data_model.semantic_communication import CommunicateScoring
+from tau2.evaluator.evaluator import EvaluationType, evaluate_simulation
 
-config = VoiceRunConfig(
+reward_info = evaluate_simulation(
+    simulation=result,
+    task=task,
+    evaluation_type=EvaluationType.ALL_WITH_NL_ASSERTIONS,
     domain="airline",
-    audio_native_config=AudioNativeConfig(
-        provider="openai",
-        model="gpt-4o-realtime-preview",
-    ),
-    llm_user="openai/gpt-4.1",
-    speech_complexity="regular",
+    communicate_scoring=CommunicateScoring(),
 )
-
-tasks = get_tasks("airline")
-orchestrator = build_voice_orchestrator(config, tasks[0], seed=42)
-result = run_simulation(orchestrator)
 ```
+
+For saved runs, `tau2 evaluate-trajs` does this for every simulation in a
+results file.
 
 ---
 
-## API Reference
+## API reference
 
-### Layer 1: Execution
+### Layer 1: execution
 
-- **`run_simulation(orchestrator, *, evaluation_type=EvaluationType.ALL, env_kwargs=None)`** -- Run a pre-built orchestrator and evaluate the result. Returns `SimulationRun` with `reward_info` attached.
+- **`run_simulation(orchestrator, *, evaluation_type=EvaluationType.ALL, env_kwargs=None, communicate_scoring=None)`**:
+  run the orchestrator, record the policy and caller persona, evaluate, and
+  return the `SimulationRun` with `reward_info` attached.
+  `communicate_scoring=None` means the default semantic judge.
 
-### Layer 2: Build
+### Layer 2: build
 
-- **`build_environment(domain, *, solo_mode=False, env_kwargs=None)`** -- Build an environment from a domain name.
-- **`build_agent(agent_name, environment, *, llm, llm_args, task, audio_native_config, solo_mode, audio_taps_dir)`** -- Build an agent from a registered name.
-- **`build_user(user_name, environment, task, *, llm, llm_args, persona_config, solo_mode)`** -- Build a half-duplex user from a registered name.
-- **`build_voice_user(environment, task, audio_native_config, *, llm, llm_args, voice_settings, persona_config, speech_complexity, seed, domain, hallucination_feedback, audio_taps_dir)`** -- Build a full-duplex voice user simulator.
-- **`build_text_orchestrator(config, task, *, seed, simulation_id, user_persona_config)`** -- Build a half-duplex `Orchestrator` from a `TextRunConfig`.
-- **`build_voice_orchestrator(config, task, *, seed, simulation_id, user_voice_settings, user_persona_config, hallucination_feedback, audio_taps_dir)`** -- Build a full-duplex `FullDuplexOrchestrator` from a `VoiceRunConfig`.
-- **`build_orchestrator(config, task, *, seed, simulation_id, user_voice_settings, user_persona_config, hallucination_feedback, audio_taps_dir)`** -- Dispatcher that calls `build_text_orchestrator` or `build_voice_orchestrator` based on config type.
+- **`build_environment(domain, *, env_kwargs=None)`**: environment for a
+  registered domain; `env_kwargs` go to its constructor (for airline, `db`
+  and `policy`).
+- **`build_agent(agent_name, environment, *, llm=None, llm_args=None, task=None)`**:
+  agent from a registered factory, given the environment's tools and
+  `agent_domain_policy(environment)`. `llm_agent_gt` needs `task`.
+- **`build_user(user_name, environment, task, *, llm=None, llm_args=None, persona_config=None)`**:
+  user simulator from a registered name, with the task's user tools and
+  `str(task.user_scenario)` as instructions.
+- **`build_orchestrator(config, task, *, seed=None, simulation_id=None)`**:
+  `Orchestrator` from a `RunConfig`, with the caller persona assigned from
+  `config.seed` and `task.id`. `seed=None` uses `config.seed`.
 
-### Layer 3: Batch Execution
+### Layer 3: batch execution
 
-- **`run_domain(config)`** -- Run all tasks for a domain from a `RunConfig`. Handles task loading, filtering, save paths, metrics.
-- **`run_tasks(config, tasks, *, save_path, save_dir, evaluation_type=EvaluationType.ALL_WITH_NL_ASSERTIONS, console_display)`** -- Run a list of tasks with concurrency, checkpointing, and retries. Note: defaults to `ALL_WITH_NL_ASSERTIONS` (unlike `run_simulation` which defaults to `ALL`).
-- **`run_single_task(config, task, *, seed, evaluation_type, save_dir, ...)`** -- Run one task with logging and optional side effects (auto-review, audio saving).
+- **`run_domain(config)`**: load and filter tasks (applying the agent's
+  registered task filter), save to
+  `data/simulations/<run_name>/results.json`, run, display metrics.
+- **`run_tasks(config, tasks, *, save_path=None, save_dir=None, evaluation_type=EvaluationType.ALL, console_display=True, results_format="json")`**:
+  run every task for `config.num_trials` trials with a thread pool of
+  `config.max_concurrency`, retries, checkpointing to `save_path` and
+  resume. `results_format` (`"json"` or `"dir"`) applies to new results
+  files. Returns `Results`.
+- **`run_single_task(config, task, *, seed=None, evaluation_type=EvaluationType.ALL, save_dir=None, verbose_logs=False, auto_review=False, review_mode="full", review_model=None)`**:
+  one simulation with per-task logging and optional auto-review.
 
 ### Helpers
 
-- **`get_options()`** -- List available domains, agents, users, and task sets.
-- **`get_tasks(task_set_name, task_split_name, task_ids, num_tasks)`** -- Load tasks with optional filtering.
-- **`load_tasks(task_set_name, task_split_name)`** -- Load raw tasks from the registry.
-- **`get_info(config, **overrides)`** -- Create run metadata (`Info` object).
-- **`make_run_name(config)`** -- Generate a timestamped run name.
+- **`get_options()`**: registered domains, agents, users and task sets.
+- **`get_tasks(task_set_name, task_split_name=None, task_ids=None, num_tasks=None, task_kwargs=None)`**:
+  load tasks, then filter by IDs (all must exist) and count.
+  `task_split_name=None` loads every task in the set.
+- **`load_tasks(task_set_name, task_split_name=None, task_kwargs=None)`**:
+  load tasks from the registry without filtering.
+- **`load_task_splits(task_set_name)`**: the split dictionary
+  (`base`, `train`, `test` for airline), or `None`.
+- **`get_environment_info(domain_name, include_tool_info=False, env_kwargs=None)`**:
+  `EnvironmentInfo` for a domain.
+- **`get_info(config)`**: run metadata (`Info`) stored in `results.json`.
+- **`make_run_name(config)`**: the timestamped default run name.
 
 ---
 
-## Choosing the Right Level
+## Choosing the right level
 
-| Scenario | Recommended Level |
-|----------|------------------|
+| Scenario | Level |
+|----------|-------|
 | Quick evaluation from the command line | Level 1 (CLI) |
-| Running evals in a Python script | Level 2 (Config-based) |
-| Custom agent development and testing | Level 3 (Instance-based) |
-| Integrating into a larger pipeline | Level 3 (Instance-based) |
-| Hyperparameter sweeps | Level 2 (Config-based) |
-| Contributing a new domain/agent | Level 3 for testing, Level 2 for benchmarking |
+| Evaluations or sweeps from a Python script | Level 2 (`RunConfig`) |
+| Developing and debugging a custom agent | Level 3 (instances) |
+| Embedding simulations in a larger pipeline | Level 3 (instances) |

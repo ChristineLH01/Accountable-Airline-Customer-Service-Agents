@@ -1,14 +1,16 @@
 # tau2.runner
 
-Simulation execution framework with a layered architecture for running evaluations at different levels of control.
+Simulation execution framework with a layered architecture for running
+evaluations at different levels of control. Usage guide with examples:
+[`docs/running_simulations.md`](../../../docs/running_simulations.md).
 
-## Module Structure
+## Module structure
 
 ```
 runner/
 ├── __init__.py        # Package exports
 ├── simulation.py      # Layer 1: run_simulation()
-├── build.py           # Layer 2: build_* functions
+├── build.py           # Layer 2: build_* functions, agent_domain_policy()
 ├── batch.py           # Layer 3: run_domain(), run_tasks(), run_single_task()
 ├── helpers.py         # Task loading, run metadata, utilities
 ├── checkpoint.py      # Save/resume logic for batch runs
@@ -18,13 +20,16 @@ runner/
 
 ## Layers
 
-### Layer 1: `simulation.py` -- Execute
+### Layer 1: `simulation.py`, execute
 
-Pure simulation execution and evaluation. Takes a fully constructed orchestrator, runs it, evaluates the result, and returns a `SimulationRun` with `reward_info` attached.
+`run_simulation(orchestrator, *, evaluation_type=EvaluationType.ALL, env_kwargs=None, communicate_scoring=None)`
+runs a fully constructed `Orchestrator`, records the policy and caller
+persona on the result, evaluates it and returns the `SimulationRun` with
+`reward_info` attached.
 
-- **No registry dependency**: Everything is encapsulated in the orchestrator.
-- **No config parsing**: No `RunConfig` needed.
-- **No side effects**: No logging setup, no file saving, no auto-review.
+- **No registry dependency**: everything is in the orchestrator.
+- **No config**: no `RunConfig` needed.
+- **No side effects**: no logging setup, file saving or review.
 
 ```python
 from tau2.runner import run_simulation
@@ -32,66 +37,77 @@ from tau2.runner import run_simulation
 result = run_simulation(orchestrator)
 ```
 
-### Layer 2: `build.py` -- Build
+### Layer 2: `build.py`, build
 
-Turns names and configuration into live instances using the registry for name resolution.
+Turns names and configuration into live instances, resolving names through
+the registry.
 
-**Low-level builders** (take individual parameters):
-- `build_environment(domain)` -- Resolve domain name to environment instance.
-- `build_agent(agent_name, environment)` -- Resolve agent name to agent instance.
-- `build_user(user_name, environment, task)` -- Resolve user name to user instance.
-- `build_voice_user(environment, task, audio_native_config)` -- Build voice user with all config wiring.
+Low-level builders:
+- `build_environment(domain, *, env_kwargs=None)`
+- `build_agent(agent_name, environment, *, llm=None, llm_args=None, task=None)`:
+  calls the registered factory with the environment's tools and
+  `agent_domain_policy(environment)` (the policy plus `AGENT_LANGUAGE_CLAUSE`).
+- `build_user(user_name, environment, task, *, llm=None, llm_args=None, persona_config=None)`
 
-**High-level builders** (take `RunConfig`):
-- `build_text_orchestrator(config, task)` -- Build a half-duplex `Orchestrator` from `TextRunConfig`.
-- `build_voice_orchestrator(config, task)` -- Build a full-duplex `FullDuplexOrchestrator` from `VoiceRunConfig`.
-- `build_orchestrator(config, task)` -- Dispatcher; delegates to the appropriate builder based on config type.
+High-level builder:
+- `build_orchestrator(config, task, *, seed=None, simulation_id=None)`:
+  builds all three from a `RunConfig`, assigns the caller persona with
+  `assign_user_persona(config.domain, task.id, config.seed)` and returns an
+  `Orchestrator`.
 
 ```python
-from tau2.runner import build_text_orchestrator, run_simulation
-from tau2 import TextRunConfig
+from tau2 import RunConfig
+from tau2.runner import build_orchestrator, run_simulation
 
-config = TextRunConfig(domain="airline", agent="llm_agent", llm_agent="openai/gpt-4.1")
-orchestrator = build_text_orchestrator(config, task, seed=42)
+config = RunConfig(llm_agent="openai/gpt-6.1-sol")
+orchestrator = build_orchestrator(config, task, seed=42)
 result = run_simulation(orchestrator)
 ```
 
-### Layer 3: `batch.py` -- Batch
+### Layer 3: `batch.py`, batch
 
-High-level batch execution with all operational concerns:
+Batch execution with the operational concerns:
 
-- **Concurrency**: Thread pool with configurable `max_concurrency`.
-- **Checkpointing**: Atomic save/resume via `checkpoint.py`.
-- **Retries**: Configurable retry with delay via `progress.py`.
-- **Hallucination retries**: When `hallucination_retries > 0` (full-duplex only), re-runs simulations where the user simulator hallucinates, using feedback from `check_hallucination()` in `evaluator.reviewer`.
-- **LiveKit pre-registration**: Calls `preregister_livekit_plugins()` on the main thread before spawning workers (required for LiveKit provider).
-- **Status monitoring**: Periodic progress display (every 30s).
-- **Side effects**: Auto-review, audio saving, per-task logging.
+- **Concurrency**: a thread pool of `config.max_concurrency` workers.
+- **Seeds**: one seed per trial, drawn from `config.seed`.
+- **Checkpointing**: results are saved after every simulation; an existing
+  results file is resumed (with a prompt unless `auto_resume`). Changing the
+  communicate scorer between runs is refused.
+- **Retries**: failed simulations are retried `max_retries` times
+  `retry_delay` seconds apart (`progress.run_with_retry`); after that a
+  placeholder with `INFRASTRUCTURE_ERROR` is recorded.
+- **Status monitoring**: progress printed every 30 s (`progress.StatusMonitor`).
+- **Side effects**: per-task logs and LLM debug logs with `verbose_logs`
+  (under `<save_dir>/artifacts/`), and optional auto-review.
+- **Ctrl+C**: cancels pending simulations; completed ones are already on disk.
 
 Entry points:
-- `run_domain(config)` -- Full pipeline: load tasks, filter, run batch, display metrics.
-- `run_tasks(config, tasks)` -- Run a list of tasks with all batch features.
-- `run_single_task(config, task)` -- Run one task with logging and side effects.
+- `run_domain(config)`: load and filter tasks, save to
+  `data/simulations/<save_to or make_run_name(config)>/results.json`, run,
+  display metrics. Used by `tau2 run`.
+- `run_tasks(config, tasks, *, save_path=None, save_dir=None, evaluation_type=EvaluationType.ALL, console_display=True, results_format="json")`
+- `run_single_task(config, task, *, seed=None, evaluation_type=EvaluationType.ALL, save_dir=None, verbose_logs=False, auto_review=False, review_mode="full", review_model=None)`
 
 ```python
+from tau2 import RunConfig
 from tau2.runner import run_domain
-from tau2 import TextRunConfig
 
-config = TextRunConfig(domain="airline", agent="llm_agent", llm_agent="openai/gpt-4.1")
-results = run_domain(config)
+results = run_domain(RunConfig(llm_agent="openai/gpt-6.1-sol", num_tasks=5))
 ```
 
-## Supporting Modules
+## Supporting modules
 
-- **`helpers.py`**: Task loading (`get_tasks`, `load_tasks`), run metadata (`get_info`, `make_run_name`), registry queries (`get_options`, `get_environment_info`).
-- **`checkpoint.py`**: `try_resume()` for resuming from existing results, `create_checkpoint_saver()` for atomic saves.
-- **`progress.py`**: `run_with_retry()` for retry logic, `StatusMonitor` for periodic progress display.
+- **`helpers.py`**: task loading (`get_tasks`, `load_tasks`,
+  `load_task_splits`, `filter_tasks`, `select_run_tasks`), run metadata
+  (`get_info`, `make_run_name`) and registry queries (`get_options`,
+  `get_environment_info`).
+- **`checkpoint.py`**: `try_resume()` to resume from existing results and
+  `create_checkpoint_fns()` for the thread-safe save/replace functions (`json` and
+  `dir` results formats).
+- **`progress.py`**: `run_with_retry()` and `StatusMonitor`.
 
 ## Relationship to `tau2.run`
 
-The `tau2.run` module is the original monolithic implementation. The `tau2.runner` package is its modular replacement. Both coexist:
-
-- **`tau2.run`**: Still works for all existing callers (CLI, tests, scripts). Not deprecated yet.
-- **`tau2.runner`**: The recommended API for new code. Cleaner separation of concerns.
-
-Over time, `tau2.run` will be thinned out to re-export from `tau2.runner`.
+`tau2.run` is a thin facade that re-exports this package's API (plus
+`RunConfig` and `EvaluationType`); the CLI imports `get_options` and
+`run_domain` from it. New code can import from either.

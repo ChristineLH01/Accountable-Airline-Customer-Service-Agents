@@ -12,30 +12,15 @@ clean:
 	rm -rf dist
 	rm -rf build
 
-## Run core tests (requires: uv sync --extra dev)
+## Run the test suite (requires: uv sync --extra dev)
 .PHONY: test
 test:
-	uv run pytest tests/ --ignore=tests/test_voice --ignore=tests/test_streaming --ignore=tests/test_gym --ignore=tests/test_domains/test_banking_knowledge
-
-## Run voice and streaming tests (requires: uv sync --extra dev --extra voice)
-.PHONY: test-voice
-test-voice:
-	uv run pytest tests/test_voice tests/test_streaming -m "not full_duplex_integration"
-
-## Run knowledge/banking tests (requires: uv sync --extra dev --extra knowledge)
-.PHONY: test-knowledge
-test-knowledge:
-	uv run pytest tests/test_domains/test_banking_knowledge
-
-## Run gymnasium tests (requires: uv sync --extra dev --extra gym)
-.PHONY: test-gym
-test-gym:
-	uv run pytest tests/test_gym
-
-## Run all tests (requires: uv sync --all-extras)
-.PHONY: test-all
-test-all:
 	uv run pytest tests/
+
+## Run the tests that call live model APIs (requires API keys; may incur costs)
+.PHONY: test-live
+test-live:
+	uv run pytest tests/ --run-live-api -m live_api
 
 ## Start the Environment CLI for interacting with domain environments
 .PHONY: env-cli
@@ -60,16 +45,6 @@ lint-fix:
 ## Run both linting and formatting
 .PHONY: check-all
 check-all: lint format
-
-## Generate leaderboard submission JSON schema from Pydantic models
-.PHONY: generate-schema
-generate-schema:
-	uv run python -m tau2.scripts.leaderboard.generate_schema
-
-## Check that leaderboard submission JSON schema is up-to-date
-.PHONY: check-schema
-check-schema:
-	uv run python -m tau2.scripts.leaderboard.generate_schema --check
 
 ## Install pre-commit hooks
 .PHONY: setup-hooks

@@ -5,20 +5,10 @@ from tau2.data_model.semantic_communication import CommunicateScoring
 from tau2.data_model.simulation import RewardInfo, SimulationRun, TerminationReason
 from tau2.data_model.tasks import RewardType, Task
 from tau2.environment.toolkit import ToolType, get_tool_types
-from tau2.evaluator.evaluator_action import ActionEvaluator, FullDuplexActionEvaluator
-from tau2.evaluator.evaluator_communicate import (
-    CommunicateEvaluator,
-    FullDuplexCommunicateEvaluator,
-)
-from tau2.evaluator.evaluator_env import (
-    EnvironmentEvaluator,
-    FullDuplexEnvironmentEvaluator,
-)
-from tau2.evaluator.evaluator_nl_assertions import (
-    FullDuplexNLAssertionsEvaluator,
-    NLAssertionsEvaluator,
-)
-from tau2.orchestrator.modes import CommunicationMode
+from tau2.evaluator.evaluator_action import ActionEvaluator
+from tau2.evaluator.evaluator_communicate import CommunicateEvaluator
+from tau2.evaluator.evaluator_env import EnvironmentEvaluator
+from tau2.evaluator.evaluator_nl_assertions import NLAssertionsEvaluator
 from tau2.registry import registry
 
 
@@ -90,14 +80,11 @@ def evaluate_simulation(
     simulation: SimulationRun,
     task: Task,
     evaluation_type: EvaluationType,
-    solo_mode: bool,
     domain: str,
-    mode: CommunicationMode = CommunicationMode.HALF_DUPLEX,
     env_kwargs: dict = None,
     strict_replay: bool = True,
     *,
     communicate_scoring: CommunicateScoring,
-    customer_language: Optional[str] = None,
 ) -> RewardInfo:
     """
     Evaluate the simulation based on the evaluation type.
@@ -106,16 +93,15 @@ def evaluate_simulation(
         simulation: The simulation run to evaluate.
         task: The task specification.
         evaluation_type: The type of evaluation to perform.
-        solo_mode: Whether the agent is in solo mode.
         domain: The domain name.
-        mode: The communication mode (HALF_DUPLEX or FULL_DUPLEX).
-              Defaults to HALF_DUPLEX. In FULL_DUPLEX mode, evaluation uses
-              simulation.ticks instead of simulation.messages.
+        env_kwargs: Extra keyword arguments for the domain environment constructor.
         strict_replay: Whether the environment replay should raise when a
               replayed tool call's output differs from the recorded one.
               Live evaluation keeps the default (True); trajectory re-grading
               passes False so recorded outputs that cosmetically predate
               current tool code do not abort the replay.
+        communicate_scoring: How `communicate_info` is scored (semantic judge
+              or substring match).
 
     Returns:
         RewardInfo with the evaluation results.
@@ -140,26 +126,16 @@ def evaluate_simulation(
     if env_kwargs is None:
         env_kwargs = {}
 
-    # Select trajectory and evaluators based on mode
-    is_full_duplex = mode == CommunicationMode.FULL_DUPLEX
-    trajectory = simulation.ticks if is_full_duplex else simulation.messages
-
-    # Select evaluator classes based on mode
-    EnvEvaluator = (
-        FullDuplexEnvironmentEvaluator if is_full_duplex else EnvironmentEvaluator
-    )
-    NLEvaluator = (
-        FullDuplexNLAssertionsEvaluator if is_full_duplex else NLAssertionsEvaluator
-    )
-    CommEvaluator = (
-        FullDuplexCommunicateEvaluator if is_full_duplex else CommunicateEvaluator
-    )
-    ActEvaluator = FullDuplexActionEvaluator if is_full_duplex else ActionEvaluator
+    trajectory = simulation.messages
+    EnvEvaluator = EnvironmentEvaluator
+    NLEvaluator = NLAssertionsEvaluator
+    CommEvaluator = CommunicateEvaluator
+    ActEvaluator = ActionEvaluator
 
     # Get tool types from the environment for action evaluation
     tool_types: Optional[dict[str, ToolType]] = None
     try:
-        env = registry.get_env_constructor(domain)(solo_mode=solo_mode, **env_kwargs)
+        env = registry.get_env_constructor(domain)(**env_kwargs)
         if env.tools is not None:
             tool_types = get_tool_types(env.tools)
         if env.user_tools is not None:
@@ -177,7 +153,6 @@ def evaluate_simulation(
             environment_constructor=registry.get_env_constructor(domain),
             task=task,
             full_trajectory=trajectory,
-            solo_mode=solo_mode,
             env_kwargs=env_kwargs,
             strict_replay=strict_replay,
         )
@@ -191,7 +166,6 @@ def evaluate_simulation(
             task=task,
             full_trajectory=trajectory,
             scoring=communicate_scoring,
-            customer_language=customer_language,
         )
     elif evaluation_type == EvaluationType.ACTION:
         reward_info = ActEvaluator.calculate_reward(
@@ -204,7 +178,6 @@ def evaluate_simulation(
             environment_constructor=registry.get_env_constructor(domain),
             task=task,
             full_trajectory=trajectory,
-            solo_mode=solo_mode,
             env_kwargs=env_kwargs,
             strict_replay=strict_replay,
         )
@@ -219,7 +192,6 @@ def evaluate_simulation(
                 task=task,
                 full_trajectory=trajectory,
                 scoring=communicate_scoring,
-                customer_language=customer_language,
             )
         nl_reward_info = None
         task_needs_nl = RewardType.NL_ASSERTION in task.evaluation_criteria.reward_basis
@@ -299,7 +271,6 @@ def evaluate_simulation(
             environment_constructor=registry.get_env_constructor(domain),
             task=task,
             full_trajectory=trajectory,
-            solo_mode=solo_mode,
             env_kwargs=env_kwargs,
         )
         action_reward_info = ActEvaluator.calculate_reward(
@@ -311,7 +282,6 @@ def evaluate_simulation(
             task=task,
             full_trajectory=trajectory,
             scoring=communicate_scoring,
-            customer_language=customer_language,
         )
         nl_reward_info = None
         if evaluation_type == EvaluationType.ALL_WITH_NL_ASSERTIONS_IGNORE_BASIS:

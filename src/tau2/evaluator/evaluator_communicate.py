@@ -4,7 +4,6 @@ from tau2.data_model.message import (
     AssistantMessage,
     Message,
     SystemMessage,
-    Tick,
     UserMessage,
 )
 from tau2.data_model.semantic_communication import (
@@ -16,7 +15,6 @@ from tau2.data_model.simulation import CommunicateCheck, RewardInfo
 from tau2.data_model.tasks import RewardType, Task
 from tau2.evaluator.evaluator_base import EvaluatorBase
 from tau2.utils.llm_utils import extract_json_from_llm_response, generate
-from tau2.utils.transcript.views import agent_messages
 
 # Calibrated semantic prompts; revision is recorded by SemanticCommunicateSettings.
 COMMUNICATE_JUDGE_SYSTEM_PROMPT = """
@@ -37,11 +35,6 @@ COMMUNICATE_JUDGE_SYSTEM_PROMPT = """
             "reasoning": "<reasoning trace>",
             "met": <true or false>
         }
-        """
-
-COMMUNICATE_JUDGE_LANGUAGE_ADDENDUM_TEMPLATE = """
-        LANGUAGE
-        - The customer speaks the language with ISO 639-1 code '{language}'. The agent may have conveyed the information in that language, in English, in a romanized/transliterated form, or in a mix; all of these are valid.
         """
 
 COMMUNICATE_JUDGE_USER_PROMPT_TEMPLATE = """
@@ -65,13 +58,8 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
         full_trajectory: list[Message],
         *,
         scoring: CommunicateScoring,
-        customer_language: str | None = None,
     ) -> RewardInfo:
-        """Score required facts; absent criteria are neutral and make no LLM calls.
-
-        ``customer_language`` is set only when the call language differs from the
-        scenario language; the semantic judge then accepts that language too.
-        """
+        """Score required facts; absent criteria are neutral and make no LLM calls."""
         semantic = scoring.scorer == CommunicateScorer.SEMANTIC
         if task.evaluation_criteria is None and not semantic:
             return RewardInfo(
@@ -94,7 +82,6 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
             full_trajectory,
             communicate_info,
             scoring=scoring,
-            customer_language=customer_language,
         )
         reward = float(all(check.met for check in checks))
         return RewardInfo(
@@ -103,7 +90,6 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
             reward_breakdown={RewardType.COMMUNICATE: reward},
             info={
                 "communicate_scoring": scoring.model_dump(mode="json"),
-                "customer_language": customer_language,
             }
             if semantic
             else None,
@@ -116,7 +102,6 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
         communicate_info: list[str],
         *,
         scoring: CommunicateScoring,
-        customer_language: str | None = None,
     ) -> list[CommunicateCheck]:
         """Check each fact; semantic mode makes one validated LLM call per fact."""
         if not communicate_info:
@@ -130,10 +115,6 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
                 and message.has_text_content()
             )
             system = COMMUNICATE_JUDGE_SYSTEM_PROMPT
-            if customer_language is not None:
-                system += COMMUNICATE_JUDGE_LANGUAGE_ADDENDUM_TEMPLATE.format(
-                    language=customer_language
-                )
             checks = []
             for value in communicate_info:
                 response = generate(
@@ -189,50 +170,3 @@ class CommunicateEvaluator(EvaluatorBase[Message]):
                 )
             )
         return outputs
-
-
-class FullDuplexCommunicateEvaluator(EvaluatorBase[Tick]):
-    @classmethod
-    def ticks_to_message_history(cls, ticks: list[Tick]) -> list[AssistantMessage]:
-        """Use the shared agent_messages transcript view."""
-        return agent_messages(ticks)
-
-    @classmethod
-    def calculate_reward(
-        cls,
-        task: Task,
-        full_trajectory: list[Tick],
-        *,
-        scoring: CommunicateScoring,
-        customer_language: str | None = None,
-    ) -> RewardInfo:
-        """Apply the same checks to the established merged-agent transcript."""
-        messages = (
-            cls.ticks_to_message_history(full_trajectory)
-            if task.evaluation_criteria is not None
-            and task.evaluation_criteria.communicate_info
-            else []
-        )
-        return CommunicateEvaluator.calculate_reward(
-            task,
-            messages,
-            scoring=scoring,
-            customer_language=customer_language,
-        )
-
-    @classmethod
-    def evaluate_communicate_info(
-        cls,
-        agent_messages: list[AssistantMessage],
-        communicate_info: list[str],
-        *,
-        scoring: CommunicateScoring,
-        customer_language: str | None = None,
-    ) -> list[CommunicateCheck]:
-        """Evaluate required facts on an already reconstructed agent transcript."""
-        return CommunicateEvaluator.evaluate_communicate_info(
-            agent_messages,
-            communicate_info,
-            scoring=scoring,
-            customer_language=customer_language,
-        )

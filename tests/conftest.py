@@ -4,14 +4,25 @@ from typing import Callable
 
 import pytest
 
-# Add test directories to path for fixture imports
+# Make the test-only mock domain (tests/mock_domain) importable
 tests_dir = Path(__file__).parent
-sys.path.insert(0, str(tests_dir / "test_streaming"))
+sys.path.insert(0, str(tests_dir))
+
+from mock_domain import environment as mock_environment  # noqa: E402
 
 from tau2.data_model.tasks import Task  # noqa: E402
 from tau2.environment.environment import Environment  # noqa: E402
 from tau2.registry import registry  # noqa: E402
 from tau2.run import get_tasks  # noqa: E402
+
+# Register the mock domain once for the whole test session
+if "mock" not in registry.get_domains():
+    registry.register_domain(mock_environment.get_environment, "mock")
+    registry.register_tasks(
+        mock_environment.get_tasks,
+        "mock",
+        get_task_splits=mock_environment.get_tasks_split,
+    )
 
 
 def pytest_addoption(parser):

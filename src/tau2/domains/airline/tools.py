@@ -24,9 +24,6 @@ from tau2.domains.airline.data_model import (
     ReservationFlight,
     User,
 )
-from tau2.domains.airline.region import AirlineRegionalSettings
-from tau2.environment.regional import describe_regional_tool
-from tau2.environment.tool import Tool
 from tau2.environment.toolkit import ToolKitBase, ToolType, is_tool
 from tau2.utils.text_match import fold_for_match
 
@@ -52,42 +49,8 @@ class AirlineTools(ToolKitBase):  # Tools
 
     db: FlightDB
 
-    def __init__(
-        self, db: FlightDB, regional_settings: AirlineRegionalSettings | None = None
-    ) -> None:
+    def __init__(self, db: FlightDB) -> None:
         super().__init__(db)
-        self.regional_settings = (
-            AirlineRegionalSettings.model_validate(regional_settings).model_copy(
-                deep=True
-            )
-            if regional_settings is not None
-            else None
-        )
-        if self.regional_settings is not None:
-            airports = {airport.iata for airport in self.regional_settings.airports}
-            routes = {
-                code
-                for flight in db.flights.values()
-                for code in (flight.origin, flight.destination)
-            }
-            if not routes <= airports:
-                raise ValueError(
-                    "Regional airport catalog does not cover the database flight graph"
-                )
-
-    def get_tools(self, include: Optional[list[str]] = None) -> dict[str, Tool]:
-        """Expose the selected catalog and local units without changing canonical tools."""
-        tools = super().get_tools(include)
-        if self.regional_settings is not None:
-            for tool in tools.values():
-                describe_regional_tool(tool, self.regional_settings)
-                for name in ("origin", "destination"):
-                    if name in tool.params.model_fields:
-                        tool.params.model_fields[
-                            name
-                        ].description = f"The {name} airport's three-letter IATA code from list_all_airports."
-                tool.params.model_rebuild(force=True)
-        return tools
 
     def _get_user(self, user_id: str) -> User:
         """Get user from database (case- and diacritic-insensitive)."""
@@ -154,17 +117,7 @@ class AirlineTools(ToolKitBase):  # Tools
 
     def _get_datetime(self) -> str:
         """Get the current datetime."""
-        if self.regional_settings is not None:
-            return self.regional_settings.current_datetime.isoformat(timespec="seconds")
         return "2024-05-15T15:00:00"
-
-    def _fee(self, canonical_amount: int) -> float | int:
-        """Scale only fixed tool fees; prices in the database are already regional."""
-        return (
-            self.regional_settings.scale_fee(canonical_amount)
-            if self.regional_settings is not None
-            else canonical_amount
-        )
 
     def _search_direct_flight(
         self,
@@ -342,10 +295,10 @@ class AirlineTools(ToolKitBase):  # Tools
 
         # Add insurance fee
         if insurance == "yes":
-            total_price += self._fee(30) * len(passengers)
+            total_price += 30 * len(passengers)
 
         # Add baggage fee
-        total_price += self._fee(50) * nonfree_baggages
+        total_price += 50 * nonfree_baggages
 
         for payment_method in payment_methods:
             payment_id = payment_method.payment_id
@@ -472,11 +425,6 @@ class AirlineTools(ToolKitBase):  # Tools
         Returns:
             A dictionary mapping IATA codes to AirportInfo objects.
         """
-        if self.regional_settings is not None:
-            return [
-                airport.model_copy(deep=True)
-                for airport in self.regional_settings.airports
-            ]
         return [
             AirportCode(iata="SFO", city="San Francisco"),
             AirportCode(iata="JFK", city="New York"),
@@ -646,9 +594,7 @@ class AirlineTools(ToolKitBase):  # Tools
         user = self._get_user(reservation.user_id)
 
         # Calculate price
-        total_price = self._fee(50) * max(
-            0, nonfree_baggages - reservation.nonfree_baggages
-        )
+        total_price = 50 * max(0, nonfree_baggages - reservation.nonfree_baggages)
 
         # Create payment
         payment = self._payment_for_update(user, payment_id, total_price)

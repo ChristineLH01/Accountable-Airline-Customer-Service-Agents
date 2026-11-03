@@ -8,7 +8,8 @@ from tau2.config import (
     DEFAULT_LLM_ARGS_USER,
     DEFAULT_LLM_USER,
 )
-from tau2.data_model.simulation import RunConfig, TextRunConfig
+from tau2.data_model.message import AssistantMessage, ToolCall
+from tau2.data_model.simulation import RunConfig
 from tau2.data_model.tasks import EnvAssertion, RewardType, Task, make_task
 from tau2.run import (
     EvaluationType,
@@ -16,42 +17,44 @@ from tau2.run import (
     get_tasks,
     load_tasks,
     run_domain,
-    run_task,
+    run_single_task,
     run_tasks,
 )
 
+LIVE_LLM = "openai/gpt-6-luna"
 
-@pytest.fixture
-def run_config() -> TextRunConfig:
-    """Test that we can get available options from the registry"""
-    return TextRunConfig(
-        domain="mock",
+
+def _config(domain_name: str, **overrides) -> RunConfig:
+    values = dict(
+        domain=domain_name,
         agent="llm_agent",
         user="user_simulator",
-        task_ids=["create_task_1"],
-        llm_agent="gpt-3.5-turbo",
+        llm_agent=LIVE_LLM,
         llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
+        llm_user=LIVE_LLM,
         llm_args_user={},
-        num_trials=3,
-        max_steps=20,
-        max_errors=10,
-        save_to=None,
-        max_concurrency=3,
+        max_concurrency=1,
+    )
+    values.update(overrides)
+    return RunConfig(**values)
+
+
+def _run_task(
+    domain_name: str,
+    task: Task,
+    evaluation_type: EvaluationType = EvaluationType.ALL,
+    **overrides,
+):
+    return run_single_task(
+        _config(domain_name, **overrides), task, evaluation_type=evaluation_type
     )
 
 
 @pytest.fixture
-def run_config_solo() -> TextRunConfig:
-    return TextRunConfig(
-        domain="mock",
-        agent="llm_solo_agent",
-        user="dummy_user",
+def run_config() -> RunConfig:
+    return _config(
+        "mock",
         task_ids=["create_task_1"],
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
         num_trials=3,
         max_steps=20,
         max_errors=10,
@@ -63,7 +66,9 @@ def run_config_solo() -> TextRunConfig:
 def test_get_options():
     """Test that we can get available options from the registry"""
     options = get_options()
-    assert options.domains is not None
+    assert "airline" in options.domains
+    assert set(options.agents) == {"llm_agent", "llm_agent_gt"}
+    assert options.users == ["user_simulator"]
 
 
 def test_load_tasks():
@@ -79,37 +84,92 @@ def test_get_tasks():
     assert tasks[0].id == "create_task_1"
 
 
+def test_airline_task_splits():
+    tasks = load_tasks("airline")
+    assert len(tasks) == 50
+    train = load_tasks("airline", task_split_name="train")
+    test = load_tasks("airline", task_split_name="test")
+    assert train and test
+    assert not {t.id for t in train} & {t.id for t in test}
+
+
+def test_run_tasks_offline_with_scripted_llm(monkeypatch, base_task: Task):
+    """End-to-end batch run on the mock domain with a scripted LLM."""
+    import tau2.agent.llm_agent as llm_agent
+    import tau2.user.user_simulator as user_simulator
+    from tau2.data_model.semantic_communication import CommunicateScoring
+
+    # Replies are built at call time: trajectories are ordered by timestamp.
+    agent_replies = iter(
+        [
+            lambda: AssistantMessage(
+                role="assistant",
+                tool_calls=[
+                    ToolCall(
+                        id="call_1",
+                        name="create_task",
+                        arguments={"user_id": "user_1", "title": "Important Meeting"},
+                    )
+                ],
+                cost=0.0,
+            ),
+            lambda: AssistantMessage(role="assistant", content="Done.", cost=0.0),
+        ]
+    )
+    user_replies = iter(
+        [
+            lambda: AssistantMessage(
+                role="assistant",
+                content="Please create a task called 'Important Meeting' for user_1.",
+                cost=0.0,
+            ),
+            lambda: AssistantMessage(
+                role="assistant", content="Thanks! ###STOP###", cost=0.0
+            ),
+        ]
+    )
+    monkeypatch.setattr(llm_agent, "generate", lambda **_: next(agent_replies)())
+    monkeypatch.setattr(user_simulator, "generate", lambda **_: next(user_replies)())
+
+    results = run_tasks(
+        _config(
+            "mock",
+            communicate_scoring=CommunicateScoring(scorer="substring"),
+        ),
+        [base_task],
+        console_display=False,
+    )
+    assert len(results.simulations) == 1
+    simulation = results.simulations[0]
+    assert simulation.termination_reason == "user_stop"
+    assert simulation.reward_info.reward == 1.0
+    assert simulation.reward_info.db_check.db_match is True
+    assert simulation.agent_cost == 0.0
+    assert simulation.user_persona is None  # the mock domain ships no personas
+
+
 @pytest.mark.live_api
 def test_simplified_run(domain_name: str):
     """Test that we can run a task with the mock domain"""
-
-    def run_simple_task(user_instruction: str, domain_name: str):
-        task = make_task(
-            user_instructions=user_instruction,
-            eval_criteria=None,
-            initialization_data=None,
-            message_history=None,
-        )
-        simulation = run_tasks(
-            domain=domain_name,
-            tasks=[task],
-            agent="llm_agent",
-            user="user_simulator",
+    task = make_task(
+        user_instructions="create a task called 'test' for user_1",
+        eval_criteria=None,
+        initialization_data=None,
+        message_history=None,
+    )
+    simulation = run_tasks(
+        _config(
+            domain_name,
             llm_agent=DEFAULT_LLM_AGENT,
             llm_args_agent=deepcopy(DEFAULT_LLM_ARGS_AGENT),
             llm_user=DEFAULT_LLM_USER,
             llm_args_user=deepcopy(DEFAULT_LLM_ARGS_USER),
             max_steps=5,
             max_errors=5,
-            evaluation_type=EvaluationType.ENV,
-            console_display=False,
-            max_concurrency=1,
-        )
-        return simulation
-
-    simulation = run_simple_task(
-        user_instruction="create a task called 'test' for user_1",
-        domain_name=domain_name,
+        ),
+        [task],
+        evaluation_type=EvaluationType.ENV,
+        console_display=False,
     )
     assert simulation is not None
 
@@ -117,17 +177,7 @@ def test_simplified_run(domain_name: str):
 @pytest.mark.live_api
 def test_run_tasks_base(domain_name: str, base_task: Task):
     """Test running a task with the mock domain"""
-    results = run_tasks(
-        domain=domain_name,
-        tasks=[base_task],
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        max_concurrency=1,
-    )
+    results = run_tasks(_config(domain_name), [base_task])
     # Check that simulation ran and has expected structure
     assert len(results.simulations) == 1
     simulation = results.simulations[0]
@@ -141,17 +191,7 @@ def test_run_tasks_base(domain_name: str, base_task: Task):
 @pytest.mark.live_api
 def test_run_task_base(domain_name: str, base_task: Task):
     """Test running a task with the mock domain"""
-    simulation = run_task(
-        domain=domain_name,
-        task=base_task,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        evaluation_type=EvaluationType.ENV,
-    )
+    simulation = _run_task(domain_name, base_task, EvaluationType.ENV)
     # Check that simulation ran and has expected structure
     assert simulation.messages is not None
     assert len(simulation.messages) > 0
@@ -163,17 +203,7 @@ def test_run_task_base(domain_name: str, base_task: Task):
 @pytest.mark.live_api
 def test_run_tasks_message_history(domain_name: str, task_with_message_history: Task):
     """Test running a task with message history"""
-    print(task_with_message_history.model_dump_json(indent=2))
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_message_history,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
+    simulation = _run_task(domain_name, task_with_message_history)
     assert simulation is not None
 
 
@@ -182,16 +212,7 @@ def test_run_tasks_initialization_data(
     domain_name: str, task_with_initialization_data: Task
 ):
     """Test running a task with initialization data"""
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_initialization_data,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
+    simulation = _run_task(domain_name, task_with_initialization_data)
     assert simulation is not None
 
 
@@ -200,33 +221,14 @@ def test_run_tasks_initialization_actions(
     domain_name: str, task_with_initialization_actions: Task
 ):
     """Test running a task with initialization actions"""
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_initialization_actions,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
+    simulation = _run_task(domain_name, task_with_initialization_actions)
     assert simulation is not None
 
 
 @pytest.mark.live_api
 def test_run_tasks_env_assertions(domain_name: str, task_with_env_assertions: Task):
     """Test running a task with env assertions"""
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_env_assertions,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        evaluation_type=EvaluationType.ENV,
-    )
+    simulation = _run_task(domain_name, task_with_env_assertions, EvaluationType.ENV)
     # Check that simulation ran and has expected structure
     assert simulation.messages is not None
     assert len(simulation.messages) > 0
@@ -244,17 +246,7 @@ def test_run_tasks_env_assertions(domain_name: str, task_with_env_assertions: Ta
             arguments={"task_id": "task_1", "expected_status": "made_up_status"},
         )
     )
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_env_assertions,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        evaluation_type=EvaluationType.ENV,
-    )
+    simulation = _run_task(domain_name, task_with_env_assertions, EvaluationType.ENV)
     assert simulation.reward_info.reward == 0.0
     assert len(simulation.reward_info.env_assertions) == 2
     assert simulation.reward_info.env_assertions[0].met is True
@@ -266,16 +258,7 @@ def test_run_tasks_history_and_env_assertions(
     domain_name: str, task_with_history_and_env_assertions: Task
 ):
     """Test running a task with history and env assertions"""
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_history_and_env_assertions,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
+    simulation = _run_task(domain_name, task_with_history_and_env_assertions)
     assert simulation is not None
 
 
@@ -283,17 +266,7 @@ def test_run_tasks_history_and_env_assertions(
 def test_run_tasks_nl_assertions(domain_name: str):
     """Test running a task with the mock domain"""
     task = get_tasks(domain_name, task_ids=["create_task_1_nl_eval"])[0]
-    simulation = run_task(
-        domain=domain_name,
-        task=task,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        evaluation_type=EvaluationType.NL_ASSERTIONS,
-    )
+    simulation = _run_task(domain_name, task, EvaluationType.NL_ASSERTIONS)
     # Check that simulation ran and has expected structure
     assert simulation.messages is not None
     assert len(simulation.messages) > 0
@@ -306,17 +279,7 @@ def test_run_tasks_nl_assertions(domain_name: str):
 
     # Add an nl_assertion that will fail and test that the reward is 0.0
     task.evaluation_criteria.nl_assertions.append("The user is not complimented")
-    simulation = run_task(
-        domain=domain_name,
-        task=task,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-        evaluation_type=EvaluationType.NL_ASSERTIONS,
-    )
+    simulation = _run_task(domain_name, task, EvaluationType.NL_ASSERTIONS)
     assert simulation.reward_info.reward == 0.0
 
     assert len(simulation.reward_info.nl_assertions) == 3
@@ -326,21 +289,12 @@ def test_run_tasks_nl_assertions(domain_name: str):
 
 
 @pytest.mark.xfail(
-    reason="Test depends on LLM quality - gpt-3.5-turbo may not consistently recognize impossible tasks"
+    reason="Test depends on LLM quality - the model may not consistently recognize impossible tasks"
 )
 @pytest.mark.live_api
 def test_run_tasks_action_checks(domain_name: str, task_with_action_checks: Task):
     """Test running a task with action checks"""
-    simulation = run_task(
-        domain=domain_name,
-        task=task_with_action_checks,
-        agent="llm_agent",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
+    simulation = _run_task(domain_name, task_with_action_checks)
     assert simulation is not None
     # Following assertions can fail if model is not good enough
     assert simulation.reward_info.reward == 1.0
@@ -350,9 +304,7 @@ def test_run_tasks_action_checks(domain_name: str, task_with_action_checks: Task
 
 @pytest.mark.live_api
 def test_run_domain(run_config: RunConfig):
-    """Test running a domain with the mock domain
-    Requires environment manager to be running
-    """
+    """Test running a domain with the mock domain"""
     simulation_results = run_domain(run_config)
     assert simulation_results is not None
 
@@ -361,36 +313,6 @@ def test_run_domain(run_config: RunConfig):
 def test_run_gt_agent(domain_name: str, base_task: Task):
     """Test running gt agent"""
     simulation_results = run_tasks(
-        domain=domain_name,
-        tasks=[base_task],
-        agent="llm_agent_gt",
-        user="user_simulator",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
+        _config(domain_name, agent="llm_agent_gt"), [base_task]
     )
     assert simulation_results is not None
-
-
-@pytest.mark.live_api
-def test_run_solo_agent(domain_name: str, base_task: Task):
-    """Test running solo agent"""
-    simulation_results = run_tasks(
-        domain=domain_name,
-        tasks=[base_task],
-        agent="llm_agent_solo",
-        user="dummy_user",
-        llm_agent="gpt-3.5-turbo",
-        llm_args_agent={},
-        llm_user="gpt-3.5-turbo",
-        llm_args_user={},
-    )
-    assert simulation_results is not None
-
-
-# =============================================================================
-# Audio-Native / Full-Duplex Run Tests
-# =============================================================================
-# NOTE: Full-duplex run tests have been moved to:
-# tests/test_streaming/test_run_streaming.py

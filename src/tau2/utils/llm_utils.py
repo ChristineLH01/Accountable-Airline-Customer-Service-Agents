@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import re
 import time
 import uuid
@@ -70,13 +69,21 @@ else:
     litellm.success_callback = []
 
 litellm.drop_params = True
-# LiteLLM 1.81's Responses bridge looks up GPT-5 capabilities on the stripped
-# "responses/<model>" string with no provider; get_llm_provider then prints a
-# "Provider List" banner (twice per call) before the lookup fails and is
-# swallowed. generate() repairs that lookup's one consequence (tool_choice, see
-# _RESPONSES_BRIDGE_PARAMS); this only silences LiteLLM's console banners.
-# Exceptions are still raised and logged.
+# Silence LiteLLM's console banners; exceptions are still raised and logged.
 litellm.suppress_debug_info = True
+
+# Every model is called through OpenRouter (https://openrouter.ai), so a single
+# OPENROUTER_API_KEY gives access to all models. Model names are OpenRouter
+# model IDs such as "openai/gpt-6.1-sol"; LiteLLM is only the HTTP client.
+OPENROUTER_ROUTE_PREFIX = "openrouter/"
+
+
+def openrouter_route(model: str) -> str:
+    """The LiteLLM route that sends an OpenRouter model ID to OpenRouter."""
+    if model.startswith(OPENROUTER_ROUTE_PREFIX):
+        return model
+    return OPENROUTER_ROUTE_PREFIX + model
+
 
 warnings.filterwarnings(
     "ignore",
@@ -125,31 +132,23 @@ def _parse_ft_model_name(model: str) -> str:
 
 def get_response_cost(response: ModelResponse) -> float:
     """
-    Get the cost of the response from the litellm completion.
+    Get the cost (USD) of a completion.
+
+    OpenRouter reports the billed cost of every call in its response; LiteLLM
+    keeps it in the response's hidden parameters. Fall back to LiteLLM's price
+    table for responses that carry no reported cost.
     """
+    hidden = getattr(response, "_hidden_params", None) or {}
+    headers = hidden.get("additional_headers") or {}
+    for reported in (
+        headers.get("llm_provider-x-litellm-response-cost"),
+        hidden.get("response_cost"),
+    ):
+        if reported is not None:
+            return float(reported)
     response.model = _parse_ft_model_name(
         response.model
     )  # FIXME: Check Litellm, passing the model to completion_cost doesn't work.
-    model = response.model.removeprefix("openai/").removeprefix("responses/")
-    if (
-        model in ("gpt-5.5", "gpt-5.5-2026-04-23")
-        and response.get("service_tier") in (None, "default")
-        and response.usage is not None
-    ):
-        # The pinned LiteLLM map lacks GPT-5.5 and its 272K pricing boundary.
-        # Standard rates: https://developers.openai.com/api/docs/models/gpt-5.5
-        usage = response.usage
-        cached = (
-            usage.prompt_tokens_details.cached_tokens or 0
-            if usage.prompt_tokens_details
-            else 0
-        )
-        input_cost = ((usage.prompt_tokens - cached) * 5 + cached * 0.5) / 1e6
-        output_cost = usage.completion_tokens * 30 / 1e6
-        if usage.prompt_tokens > 272_000:
-            input_cost *= 2
-            output_cost *= 1.5
-        return input_cost + output_cost
     try:
         cost = completion_cost(completion_response=response)
     except Exception as e:
@@ -192,45 +191,14 @@ def to_tau2_messages(
     return tau2_messages
 
 
-def _input_audio_format(message: UserMessage) -> str:
-    """Return the container format, preferring WAV/MP3 magic over raw encoding."""
-    b64 = message.audio_content or ""
-    if b64.startswith("UklG"):  # base64 of b"RIFF" — WAV container
-        return "wav"
-    if b64.startswith("SUQz"):  # base64 of b"ID3" — MP3 container
-        return "mp3"
-    if message.audio_format is not None:
-        return message.audio_format.encoding.value
-    return "wav"
-
-
 def to_litellm_messages(messages: list[Message]) -> list[dict]:
     """
     Convert a list of Tau2 messages to a list of litellm messages.
-
-    A UserMessage carrying ``audio_content`` becomes multipart content
-    (text part + ``input_audio`` part) so multimodal judges can send audio
-    through the single ``generate()`` seam.
     """
     litellm_messages = []
     for message in messages:
         if isinstance(message, UserMessage):
-            if message.audio_content:
-                content: list[dict] = []
-                if message.content:
-                    content.append({"type": "text", "text": message.content})
-                content.append(
-                    {
-                        "type": "input_audio",
-                        "input_audio": {
-                            "data": message.audio_content,
-                            "format": _input_audio_format(message),
-                        },
-                    }
-                )
-                litellm_messages.append({"role": "user", "content": content})
-            else:
-                litellm_messages.append({"role": "user", "content": message.content})
+            litellm_messages.append({"role": "user", "content": message.content})
         elif isinstance(message, AssistantMessage):
             tool_calls = None
             if message.is_tool_call():
@@ -344,25 +312,6 @@ def _format_messages_for_logging(messages: list[dict]) -> list[dict]:
             content_lines = content.split("\n")
             if len(content_lines) > 1:
                 msg_copy["content"] = content_lines
-        elif isinstance(content, list):
-            # Multipart content: never log raw audio payloads (huge base64).
-            parts = []
-            for part in content:
-                if isinstance(part, dict) and part.get("type") == "input_audio":
-                    audio = part.get("input_audio") or {}
-                    data = audio.get("data") or ""
-                    parts.append(
-                        {
-                            **part,
-                            "input_audio": {
-                                **audio,
-                                "data": f"<audio: {len(data)} b64 chars>",
-                            },
-                        }
-                    )
-                else:
-                    parts.append(part)
-            msg_copy["content"] = parts
         formatted.append(msg_copy)
     return formatted
 
@@ -428,80 +377,6 @@ def _write_llm_log(
     # Write to file with indentation
     with open(log_file, "w", encoding="utf-8") as f:
         json.dump(call_data, f, indent=2)
-
-
-ANTHROPIC_ADAPTIVE_THINKING_MODEL_PREFIXES = (
-    "claude-opus-4-6",
-    "claude-opus-4-7",
-    "claude-opus-4-8",
-    "claude-fable-5",
-)
-_ANTHROPIC_OUTPUT_CONFIG_EFFORTS = frozenset({"low", "medium", "high"})
-
-
-def _openai_responses_bridge_model(model: str) -> str:
-    """Route OpenAI models through LiteLLM Responses; preserve other providers."""
-    if "/" not in model:
-        return f"openai/responses/{model}"
-    provider, rest = model.split("/", 1)
-    if provider == "openai":
-        if rest.startswith("responses/"):
-            return model  # already bridged
-        return f"openai/responses/{rest}"
-    return model  # non-OpenAI provider — leave as-is
-
-
-# Params the bridge drops because its failed capability lookup reports them
-# unsupported, although the Responses API accepts them.
-_RESPONSES_BRIDGE_PARAMS = ("tool_choice",)
-
-
-def _keep_non_leading_system_messages_positional(
-    litellm_messages: list[dict],
-) -> list[dict]:
-    """Preserve system annotations in Responses input instead of hoisting them."""
-    first_non_system = next(
-        (i for i, m in enumerate(litellm_messages) if m.get("role") != "system"),
-        None,
-    )
-    rewrapped = []
-    for i, message in enumerate(litellm_messages):
-        keep_positional = (
-            message.get("role") == "system"
-            and isinstance(message.get("content"), str)
-            and (
-                i > first_non_system
-                if first_non_system is not None
-                else (i > 0 or len(litellm_messages) == 1)
-            )
-        )
-        if keep_positional:
-            message = {
-                **message,
-                "content": [{"type": "text", "text": message["content"]}],
-            }
-        rewrapped.append(message)
-    return rewrapped
-
-
-def _uses_anthropic_adaptive_thinking(model: str) -> bool:
-    """Identify models requiring adaptive rather than budgeted thinking."""
-    base_model = model.split("/")[-1]
-    return base_model.startswith(ANTHROPIC_ADAPTIVE_THINKING_MODEL_PREFIXES)
-
-
-def _apply_anthropic_adaptive_thinking(model: str, kwargs: dict[str, Any]) -> None:
-    """Translate portable reasoning effort without overriding explicit thinking."""
-    if not _uses_anthropic_adaptive_thinking(model):
-        return
-    if kwargs.get("reasoning_effort") is None:
-        return
-    effort = kwargs.pop("reasoning_effort")
-    if "thinking" in kwargs:
-        return
-    kwargs["thinking"] = {"type": "adaptive"}
-    if isinstance(effort, str) and effort in _ANTHROPIC_OUTPUT_CONFIG_EFFORTS:
-        kwargs.setdefault("output_config", {"effort": effort})
 
 
 class LLMResponseValidationError(ValueError):
@@ -594,10 +469,10 @@ def _generate_once(
     **kwargs: Any,
 ) -> UserMessage | AssistantMessage:
     """
-    Generate a response from the model.
+    Generate a response from the model (called through OpenRouter).
 
     Args:
-        model: The model to use.
+        model: The OpenRouter model ID to use (e.g. "openai/gpt-6.1-sol").
         messages: The messages to send to the model.
         tools: The tools to use.
         tool_choice: The tool choice to use.
@@ -612,51 +487,11 @@ def _generate_once(
     if kwargs.get("num_retries") is None:
         kwargs["num_retries"] = DEFAULT_MAX_RETRIES
 
-    # The pinned LiteLLM release rejects (or silently drops) xhigh for GPT-5.5.
-    # Pass it through the Responses API body so the requested effort reaches
-    # OpenAI, including user-simulator turns that use function tools.
-    if (
-        model.split("/")[-1].startswith("gpt-5.5")
-        and kwargs.get("reasoning_effort") == "xhigh"
-    ):
-        if "/" not in model or model.startswith("openai/"):
-            kwargs = dict(kwargs)
-            kwargs.pop("reasoning_effort")
-            extra_body = dict(kwargs.pop("extra_body", {}) or {})
-            if "reasoning" in extra_body:
-                raise ValueError("Conflicting GPT-5.5 reasoning settings")
-            extra_body["reasoning"] = {"effort": "xhigh"}
-            kwargs["extra_body"] = extra_body
-
-    # Vertex AI Gemini 3 models require VERTEXAI_LOCATION="global"
-    if model.startswith("vertex_ai/gemini-3") and not os.environ.get(
-        "VERTEXAI_LOCATION"
-    ):
-        os.environ["VERTEXAI_LOCATION"] = "global"
-
-    api_model = (
-        _openai_responses_bridge_model(model)
-        if model.split("/")[-1].startswith("gpt-5")
-        else model
-    )
-    _apply_anthropic_adaptive_thinking(model, kwargs)
+    api_model = openrouter_route(model)
     litellm_messages = to_litellm_messages(messages)
-    if api_model.startswith("openai/responses/"):
-        litellm_messages = _keep_non_leading_system_messages_positional(
-            litellm_messages
-        )
     tools_schema = [tool.openai_schema for tool in tools] if tools else None
     if tools_schema and tool_choice is None:
         tool_choice = "auto"
-    if api_model.startswith("openai/responses/") and tool_choice is not None:
-        kwargs["allowed_openai_params"] = list(
-            dict.fromkeys(
-                [
-                    *(kwargs.get("allowed_openai_params") or []),
-                    *_RESPONSES_BRIDGE_PARAMS,
-                ]
-            )
-        )
 
     # Prepare request data for logging
     formatted_messages = _format_messages_for_logging(litellm_messages)
@@ -742,9 +577,8 @@ def get_cost(messages: list[Message]) -> tuple[float | None, float | None]:
     Get the (agent_cost, user_cost) of the interaction.
 
     Each side is computed independently: a side is None if any of its
-    messages has no cost. This way an uncosted agent message (e.g. an
-    audio-native provider without usage reporting) doesn't discard the
-    user side's cost, and vice versa.
+    messages has no cost. This way an uncosted agent message doesn't discard
+    the user side's cost, and vice versa.
     """
     agent_cost: float | None = 0.0
     user_cost: float | None = 0.0

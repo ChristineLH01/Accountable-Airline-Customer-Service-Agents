@@ -3,9 +3,9 @@
 Minimal custom agent example.
 
 This example shows how to create the simplest possible tau2 agent,
-register it, and run it against the mock domain -- all in one file.
+register it, and run it on an airline task -- all in one file.
 
-No API keys are needed (uses the mock domain with a real LLM).
+Needs an OPENROUTER_API_KEY (the agent and the user simulator call real LLMs).
 
 Usage:
     python examples/agents/minimal_text_agent.py
@@ -13,7 +13,7 @@ Usage:
 What this does:
     1. Defines a custom agent that wraps an LLM with a system prompt
     2. Registers it with the tau2 registry
-    3. Runs it on a single mock task
+    3. Runs it on a single airline task
     4. Prints the result
 """
 
@@ -58,7 +58,7 @@ class MinimalAgent(HalfDuplexAgent[MinimalAgentState]):
         self,
         tools: list[Tool],
         domain_policy: str,
-        llm: str = "openai/gpt-4.1-mini",
+        llm: str = "openai/gpt-6.1-sol",
         llm_args: Optional[dict] = None,
     ):
         super().__init__(tools=tools, domain_policy=domain_policy)
@@ -110,12 +110,12 @@ def create_minimal_agent(tools, domain_policy, **kwargs):
     The registry calls this with:
         tools: list[Tool] -- the domain's tools
         domain_policy: str -- the domain's policy document
-        **kwargs may include: llm, llm_args, task, solo_mode
+        **kwargs may include: llm, llm_args, task
     """
     return MinimalAgent(
         tools=tools,
         domain_policy=domain_policy,
-        llm=kwargs.get("llm", "openai/gpt-4.1-mini"),
+        llm=kwargs.get("llm", "openai/gpt-6.1-sol"),
         llm_args=kwargs.get("llm_args"),
     )
 
@@ -125,7 +125,7 @@ def create_minimal_agent(tools, domain_policy, **kwargs):
 # =============================================================================
 
 if __name__ == "__main__":
-    from tau2.data_model.simulation import TextRunConfig
+    from tau2.data_model.simulation import RunConfig
     from tau2.registry import registry
     from tau2.runner import get_tasks, run_single_task
 
@@ -133,12 +133,12 @@ if __name__ == "__main__":
     registry.register_agent_factory(create_minimal_agent, "minimal_agent")
 
     # --- Option A: Run a single task programmatically ---
-    tasks = get_tasks("mock", task_ids=["create_task_1"])
+    tasks = get_tasks("airline", task_ids=["0"])
     result = run_single_task(
-        TextRunConfig(
-            domain="mock",
+        RunConfig(
+            domain="airline",
             agent="minimal_agent",
-            llm_agent="openai/gpt-4.1-mini",
+            llm_agent="openai/gpt-6.1-sol",
         ),
         tasks[0],
         seed=42,
@@ -147,14 +147,14 @@ if __name__ == "__main__":
     print(f"Reward: {result.reward_info.reward}")
     print(f"Messages: {len(result.messages)}")
 
-    # --- Option B: Run all mock tasks via run_domain ---
+    # --- Option B: Run all airline tasks via run_domain ---
     # Uncomment to run a full evaluation:
     #
     # results = run_domain(
-    #     TextRunConfig(
-    #         domain="mock",
+    #     RunConfig(
+    #         domain="airline",
     #         agent="minimal_agent",
-    #         llm_agent="openai/gpt-4.1-mini",
+    #         llm_agent="openai/gpt-6.1-sol",
     #         num_trials=1,
     #         max_concurrency=1,
     #     )

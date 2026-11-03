@@ -4,21 +4,20 @@ from types import SimpleNamespace
 
 import pytest
 
-from tau2.data_model.message import AssistantMessage, Tick
+from tau2.data_model.message import AssistantMessage
 from tau2.data_model.semantic_communication import (
     CommunicateScoring,
     SemanticCommunicateSettings,
 )
 from tau2.data_model.simulation import (
     RewardInfo,
+    RunConfig,
     SimulationRun,
     TerminationReason,
-    TextRunConfig,
 )
 from tau2.data_model.tasks import RewardType, Task
 from tau2.evaluator.evaluator import EvaluationType, evaluate_simulation
 from tau2.evaluator.evaluator_communicate import CommunicateEvaluator
-from tau2.orchestrator.modes import CommunicationMode
 
 
 def task():
@@ -54,15 +53,12 @@ def simulation():
         duration=1,
         termination_reason=TerminationReason.USER_STOP,
         messages=[
-            AssistantMessage(role="assistant", content="Recibirá veinte dólares.")
+            AssistantMessage(role="assistant", content="You will get twenty dollars.")
         ],
     )
 
 
-@pytest.mark.parametrize("language", ["en", "es", "pt", "hi", "zh", "ko"])
-def test_explicit_semantic_path_handles_all_languages_and_records_contract(
-    monkeypatch, language
-):
+def test_explicit_semantic_path_records_contract(monkeypatch):
     import tau2.evaluator.evaluator_communicate as module
 
     calls = []
@@ -78,7 +74,6 @@ def test_explicit_semantic_path_handles_all_languages_and_records_contract(
         task(),
         simulation().messages,
         scoring=scoring(),
-        customer_language=language,
     )
     assert result.reward == 0 and result.communicate_checks[0].met is False
     assert result.info["communicate_scoring"]["judge"]["model"] == "explicit-test-judge"
@@ -94,7 +89,7 @@ def test_semantic_pass_cannot_override_failed_database_check(monkeypatch):
         module,
         "generate",
         lambda **_: SimpleNamespace(
-            content='{"met": true, "reasoning": "Equivalent translation conveyed."}'
+            content='{"met": true, "reasoning": "Equivalent meaning conveyed."}'
         ),
     )
     monkeypatch.setattr(
@@ -111,17 +106,15 @@ def test_semantic_pass_cannot_override_failed_database_check(monkeypatch):
         simulation(),
         task(),
         EvaluationType.ALL,
-        False,
-        "retail",
+        "airline",
         communicate_scoring=scoring(),
-        customer_language="es",
     )
     assert result.reward == 0
     assert result.reward_breakdown[RewardType.COMMUNICATE] == 1
     assert result.reward_breakdown[RewardType.DB] == 0
 
 
-def test_full_duplex_uses_merged_agent_chunks(monkeypatch):
+def test_judge_prompt_is_the_pinned_english_contract(monkeypatch):
     import tau2.evaluator.evaluator_communicate as module
 
     calls = []
@@ -131,43 +124,21 @@ def test_full_duplex_uses_merged_agent_chunks(monkeypatch):
         lambda **kwargs: calls.append(kwargs)
         or SimpleNamespace(content='{"met": true, "reasoning": "Equivalent meaning."}'),
     )
-    sim = simulation()
-    sim.ticks = [
-        Tick(
-            tick_id=0,
-            timestamp="0",
-            agent_chunk=AssistantMessage(
-                role="assistant", content="veinte ", utterance_ids=["a"]
-            ),
-        ),
-        Tick(
-            tick_id=1,
-            timestamp="1",
-            agent_chunk=AssistantMessage(
-                role="assistant", content="dólares", utterance_ids=["a"]
-            ),
-        ),
-    ]
     result = evaluate_simulation(
-        sim,
+        simulation(),
         task(),
         EvaluationType.COMMUNICATE,
-        False,
-        "retail",
-        mode=CommunicationMode.FULL_DUPLEX,
+        "airline",
         communicate_scoring=scoring(),
-        customer_language="es",
     )
     assert result.reward == 1
     assert len(calls) == 1
+    assert calls[0]["messages"][0].content == module.COMMUNICATE_JUDGE_SYSTEM_PROMPT
     assert calls[0]["messages"][
         1
     ].content == module.COMMUNICATE_JUDGE_USER_PROMPT_TEMPLATE.format(
-        info_str="refund is 20 dollars", transcript="assistant: veinte dólares"
-    )
-    assert calls[0]["messages"][0].content == (
-        module.COMMUNICATE_JUDGE_SYSTEM_PROMPT
-        + module.COMMUNICATE_JUDGE_LANGUAGE_ADDENDUM_TEMPLATE.format(language="es")
+        info_str="refund is 20 dollars",
+        transcript="assistant: You will get twenty dollars.",
     )
 
 
@@ -186,7 +157,6 @@ def test_malformed_reply_errors_and_legacy_does_not_call_judge(monkeypatch):
             task(),
             simulation().messages,
             scoring=scoring(),
-            customer_language=None,
         )
     monkeypatch.setattr(
         module, "generate", lambda **_: pytest.fail("Legacy matching called a judge")
@@ -196,15 +166,14 @@ def test_malformed_reply_errors_and_legacy_does_not_call_judge(monkeypatch):
             simulation(),
             task(),
             EvaluationType.COMMUNICATE,
-            False,
-            "retail",
+            "airline",
             communicate_scoring=SUBSTRING,
         ).reward
         == 0
     )
-    assert SemanticCommunicateSettings().model == "gpt-5.5"
-    assert SemanticCommunicateSettings().model_args == {"reasoning_effort": "low"}
-    assert TextRunConfig().communicate_scoring == CommunicateScoring()
+    assert SemanticCommunicateSettings().model == "openai/gpt-6-luna"
+    assert SemanticCommunicateSettings().model_args == {"reasoning_effort": "medium"}
+    assert RunConfig().communicate_scoring == CommunicateScoring()
 
 
 def test_explicit_semantic_contract_records_and_rejects_mixed_auto_resume(tmp_path):
@@ -212,7 +181,7 @@ def test_explicit_semantic_contract_records_and_rejects_mixed_auto_resume(tmp_pa
     from tau2.runner.checkpoint import try_resume
     from tau2.runner.helpers import get_info
 
-    config = TextRunConfig(domain="retail", communicate_scoring=scoring())
+    config = RunConfig(domain="airline", communicate_scoring=scoring())
     info = get_info(config)
     assert info.communicate_scoring == scoring()
     previous = Results(info=info, tasks=[task()], simulations=[])
@@ -243,16 +212,14 @@ def test_approved_defaults_are_independent_and_forwarded(monkeypatch):
         task(),
         simulation().messages,
         scoring=scoring(configured),
-        customer_language="ko",
     )
-    assert calls[0]["model"] == "gpt-5.5"
-    assert calls[0]["reasoning_effort"] == "low"
+    assert calls[0]["model"] == "openai/gpt-6-luna"
+    assert calls[0]["reasoning_effort"] == "medium"
     assert "temperature" not in calls[0]
-    configured.model_args["reasoning_effort"] = "medium"
-    assert SemanticCommunicateSettings().model_args == {"reasoning_effort": "low"}
+    configured.model_args["reasoning_effort"] = "high"
+    assert SemanticCommunicateSettings().model_args == {"reasoning_effort": "medium"}
 
 
-@pytest.mark.parametrize("mode", list(CommunicationMode))
 @pytest.mark.parametrize(
     "evaluation_type,should_evaluate",
     [
@@ -264,7 +231,7 @@ def test_approved_defaults_are_independent_and_forwarded(monkeypatch):
     ],
 )
 def test_communication_runs_only_when_required_or_explicit(
-    monkeypatch, mode, evaluation_type, should_evaluate
+    monkeypatch, evaluation_type, should_evaluate
 ):
     import tau2.evaluator.evaluator as evaluator
     import tau2.evaluator.evaluator_communicate as module
@@ -280,11 +247,8 @@ def test_communication_runs_only_when_required_or_explicit(
     )
     for name in (
         "EnvironmentEvaluator",
-        "FullDuplexEnvironmentEvaluator",
         "ActionEvaluator",
-        "FullDuplexActionEvaluator",
         "NLAssertionsEvaluator",
-        "FullDuplexNLAssertionsEvaluator",
     ):
         monkeypatch.setattr(
             getattr(evaluator, name),
@@ -297,17 +261,12 @@ def test_communication_runs_only_when_required_or_explicit(
         "first requirement",
         "second requirement",
     ]
-    sim = simulation()
-    sim.ticks = []
     result = evaluate_simulation(
-        sim,
+        simulation(),
         selected,
         evaluation_type,
-        False,
-        "retail",
-        mode=mode,
+        "airline",
         communicate_scoring=scoring(),
-        customer_language="es",
     )
     assert len(calls) == (2 if should_evaluate else 0)
     assert result.reward == (0 if should_evaluate else 1)
@@ -323,10 +282,9 @@ def test_communication_runs_only_when_required_or_explicit(
 @pytest.mark.parametrize(
     "criteria", [None, {"communicate_info": None}, {"communicate_info": []}]
 )
-@pytest.mark.parametrize("full_duplex", [False, True])
 @pytest.mark.parametrize("semantic", [False, True])
 def test_missing_communication_requirements_are_neutral_without_judge_calls(
-    monkeypatch, criteria, full_duplex, semantic
+    monkeypatch, criteria, semantic
 ):
     import tau2.evaluator.evaluator_communicate as module
 
@@ -341,22 +299,10 @@ def test_missing_communication_requirements_are_neutral_without_judge_calls(
         user_scenario={"instructions": "Fixture"},
         evaluation_criteria=criteria,
     )
-    evaluator = (
-        module.FullDuplexCommunicateEvaluator
-        if full_duplex
-        else module.CommunicateEvaluator
-    )
-    if full_duplex:
-        monkeypatch.setattr(
-            evaluator,
-            "ticks_to_message_history",
-            lambda _: pytest.fail("Empty criteria reconstructed a transcript"),
-        )
-    reward = evaluator.calculate_reward(
+    reward = module.CommunicateEvaluator.calculate_reward(
         selected,
         [],
         scoring=scoring() if semantic else SUBSTRING,
-        customer_language="ko",
     )
     assert reward.reward == 1
     assert not reward.communicate_checks

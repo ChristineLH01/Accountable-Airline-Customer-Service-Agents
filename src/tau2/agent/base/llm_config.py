@@ -20,8 +20,8 @@ class LLMConfigMixin:
     - llm_args: Additional arguments for the LLM
     - set_seed(): Method to set the random seed
 
-    Used by both agents (LLMAgent, StreamingLLMAgent) and
-    user simulators (UserSimulator, StreamingUserSimulator).
+    Used by both agents (LLMAgent, LLMGTAgent) and the user simulator
+    (UserSimulator).
     """
 
     llm: str

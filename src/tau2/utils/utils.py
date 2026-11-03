@@ -24,6 +24,12 @@ else:
     SOURCE_DIR = Path(__file__).parents[3]
     DATA_DIR = SOURCE_DIR / "data"
 
+
+def domain_data_dir(domain: str) -> Path:
+    """Directory holding a domain's data files, e.g. ``data/tau2-airline``."""
+    return DATA_DIR / f"tau2-{domain}"
+
+
 # Check if data directory exists and is accessible
 if not DATA_DIR.exists():
     logger.warning(f"Data directory does not exist: {DATA_DIR}")

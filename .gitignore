@@ -15,7 +15,6 @@ data/datasets/
 data/models/
 data/analyses/
 data/annotations/
-src/experiments/model_serving/vllm_serving/.*
 .ruff_cache
 
 # Byte-compiled / optimized / DLL files
@@ -196,15 +195,7 @@ cython_debug/
 *.arrow
 cache-*.arrow
 data-*-of-*.arrow
-src/experiments/model_training/data/full-v1/*/cache-*.arrow
-src/experiments/model_training/data/full-v1/*/data-*.arrow
-data/.embeddings_cache/
-
-# Large JSONL training files
-src/experiments/model_training/data/train_full-v1.jsonl
-src/experiments/model_training/data/test_full-v1.jsonl
 data/simulations/.credentials/
-!data/simulations/knowledge/
 
 # LaTeX build artifacts
 *.aux
@@ -214,12 +205,7 @@ data/simulations/.credentials/
 *.synctex
 *.bbl
 
-# Simulation dump files (very large, use --results mode in export_html.py instead)
-# TODO: Clean up old branches that already have these committed to reclaim git space:
-#   feature/tau-voice-private, feature/tau-voice-annotation, keshav-voice,
-#   voice-mode, soham/appendix, soham/hyp
-#   These branches contain ~198MB of *_simulation.json blobs in git history.
-#   After deleting the branches, GitHub will eventually GC the orphaned objects.
+# Simulation dump files written by `tau2 view` notes (very large)
 *_simulation.json
 
 # Cursor IDE

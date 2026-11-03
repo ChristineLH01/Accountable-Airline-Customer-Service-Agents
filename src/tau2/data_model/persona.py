@@ -2,23 +2,19 @@
 Persona configuration for user simulator behavior.
 
 IMPORTANT: User behavior/persona is controlled in THREE places:
-1. Shared simulation scaffolds (tau2.user.guidelines) with the run's language pack persona
+1. Shared simulation scaffold (tau2.user.guidelines) with the caller persona (tau2.user.personas)
 2. Task-specific persona (UserScenario.persona field) - Baked into task JSON at creation time
 3. Runtime persona config (PersonaConfig, this file) - Configurable at simulation time
 
 This allows for:
 - Global defaults via guidelines
 - Task-specific personas (e.g., "tech-savvy" vs "elderly confused user")
-- Runtime variation (e.g., terseness level, interrupt tendency, quirks)
-
-FUTURE: To support different persona attributes for text vs voice users, consider:
-- Option A (Inheritance): VoicePersonaConfig(PersonaConfig) with voice-specific attrs (speech_quirks, accent), type-safe
-- Option B (Single config): One PersonaConfig with optional mode-specific attrs, simpler but less type-safe
+- Runtime variation (e.g., terseness level)
 """
 
 import random
 from enum import Enum
-from typing import Any, Literal, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,13 +24,6 @@ class Verbosity(str, Enum):
 
     STANDARD = "standard"  # Normal conversational responses
     MINIMAL = "minimal"  # 1-2 word responses when sufficient
-
-
-class InterruptTendency(str, Enum):
-    """Whether the user waits for the agent to finish or can interrupt them."""
-
-    WAITS = "waits"  # User waits for agent to complete before responding
-    INTERRUPTS = "interrupts"  # User can interrupt agent while they're speaking
 
 
 class PersonaConfig(BaseModel):
@@ -50,18 +39,11 @@ class PersonaConfig(BaseModel):
         description="How verbose the user's responses are. Default: STANDARD",
     )
 
-    interrupt_tendency: Optional[InterruptTendency] = Field(
-        default=None,
-        description="Whether user can interrupt the agent while they're speaking. Only applicable to streaming/voice users. None (default) means no interruption behavior configured.",
-    )
-
     # Future attributes can be added here:
     # technical_skill: TechnicalSkill = TechnicalSkill.AVERAGE
     # speech_quirks: list[str] = []
 
-    def to_guidelines_text(
-        self, mode: Literal["text", "voice"] = "text"
-    ) -> Optional[str]:
+    def to_guidelines_text(self) -> Optional[str]:
         """
         Convert persona config to additional guidelines text to append to system prompt.
         Returns None if no modifications needed (all defaults).
@@ -112,10 +94,7 @@ You are terse in your responses.
             PersonaConfig.from_dict({"verbosity": {"minimal": 0.8, "standard": 0.2}})
 
             # Mixed: some explicit, some weighted random
-            PersonaConfig.from_dict({
-                "verbosity": "minimal",
-                "interrupt_tendency": {"waits": 0.3, "interrupts": 0.7}
-            })
+            PersonaConfig.from_dict({"verbosity": {"minimal": 0.5, "standard": 0.5}})
         """
         resolved_config = {}
 

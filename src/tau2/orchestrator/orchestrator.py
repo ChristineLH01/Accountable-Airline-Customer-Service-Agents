@@ -1,11 +1,8 @@
-import json
 import time
 import uuid
-from abc import ABC, abstractmethod
 from copy import deepcopy
 from datetime import datetime, timedelta
 from enum import Enum
-from pathlib import Path
 from typing import Any, Generic, Optional, TypeVar
 
 from loguru import logger
@@ -15,8 +12,6 @@ from tau2.agent.base_agent import (
     HalfDuplexAgent,
     is_valid_agent_history_message,
 )
-from tau2.agent.llm_agent import LLMSoloAgent
-from tau2.data_model.language import CallContext
 from tau2.data_model.message import (
     AssistantMessage,
     Message,
@@ -28,8 +23,7 @@ from tau2.data_model.message import (
 from tau2.data_model.simulation import SimulationRun, TerminationReason
 from tau2.data_model.tasks import EnvFunctionCall, InitializationData, Task
 from tau2.environment.environment import Environment, EnvironmentInfo
-from tau2.orchestrator.modes import CommunicationMode
-from tau2.user.user_simulator import DummyUser, UserSimulator, UserState
+from tau2.user.user_simulator import UserSimulator, UserState
 from tau2.user.user_simulator_base import (
     HalfDuplexUser,
     UserError,
@@ -49,88 +43,98 @@ DEFAULT_FIRST_AGENT_MESSAGE = AssistantMessage(
     role="assistant", content="Hi! How can I help you today?", cost=0.0
 )
 
-# Type variables for generic orchestrators
-# Base types for BaseOrchestrator - unbound to allow both half-duplex and full-duplex
-BaseAgentT = TypeVar("BaseAgentT")
-BaseUserT = TypeVar("BaseUserT")
-TrajectoryItemT = TypeVar(
-    "TrajectoryItemT"
-)  # Message for half-duplex, Tick for full-duplex
-
-# Half-duplex specific types for Orchestrator
 AgentT = TypeVar("AgentT", bound=HalfDuplexAgent)
 UserT = TypeVar("UserT", bound=HalfDuplexUser)
 
 
-class BaseOrchestrator(ABC, Generic[BaseAgentT, BaseUserT, TrajectoryItemT]):
+class Orchestrator(Generic[AgentT, UserT]):
     """
-    Abstract base class for orchestrators.
+    Orchestrator for turn-based (half-duplex) simulation.
 
-    Provides the common infrastructure for managing simulations between Agent, User,
-    and Environment. Subclasses implement specific communication patterns:
-    - Orchestrator: Half-duplex (turn-based) communication, trajectory of Messages
-    - FullDuplexOrchestrator: Full-duplex (streaming) communication, trajectory of Ticks
+    Passes messages between the Agent, User, and Environment in alternating turns.
 
-    Type Parameters:
-        BaseAgentT: The agent type
-        BaseUserT: The user type
-        TrajectoryItemT: The trajectory item type (Message for half-duplex, Tick for full-duplex)
+    Communication Protocol:
+        The orchestrator manages message flow between three roles: AGENT, USER, and ENV(ironment).
+        Messages are passed in a turn-based manner following these rules:
 
-    Shared Responsibilities:
-        - Environment initialization and tool execution
-        - Termination tracking (max steps, max errors, done state)
-        - Trajectory management
-        - Simulation run lifecycle (initialize, step loop, finalize)
+        Message Types:
+            - AssistantMessage: Sent by the agent
+            - UserMessage: Sent by the user
+            - ToolMessage: Sent by the environment in response to tool calls
+            - MultiToolMessage: Wraps multiple tool messages when multiple tool calls are made
 
-    Subclass Responsibilities:
-        - Communication-specific initialization
-        - Step implementation for their communication pattern
-        - Mode-specific termination checks
+        Message Content Rules:
+            1. Messages must contain EITHER text content OR tool calls, never both
+            2. Messages cannot be empty (must have either text or tool calls)
+            3. Tool calls must be followed by corresponding tool messages from the environment
+
+        Communication Flow:
+            - AGENT -> USER: Agent sends text response to user
+            - AGENT -> ENV: Agent makes tool call(s) to environment
+            - USER -> AGENT: User sends text message to agent
+            - USER -> ENV: User makes tool call(s) to environment
+            - ENV -> AGENT: Environment returns tool results to agent (after agent's tool call)
+            - ENV -> USER: Environment returns tool results to user (after user's tool call)
+
+        Termination:
+            Simulation ends when:
+            - Agent sends stop signal
+            - User sends stop signal (###STOP###, ###TRANSFER###, ###OUT-OF-SCOPE###)
+            - Maximum steps (max_steps) reached
+            - Maximum errors (max_errors) reached
+            - Wallclock timeout reached (if timeout is set)
+            - Communication protocol violation detected (if validate_communication=True)
     """
 
     def __init__(
         self,
         domain: str,
-        agent: BaseAgentT,
-        user: BaseUserT,
+        agent: AgentT,
+        user: UserT,
         environment: Environment,
         task: Task,
         max_steps: int = 100,
         max_errors: int = 10,
         seed: Optional[int] = None,
         simulation_id: Optional[str] = None,
+        validate_communication: bool = False,
         timeout: Optional[float] = None,
-        call_context: Optional[CallContext] = None,
     ):
         """
-        Initialize the base orchestrator.
+        Initialize the Orchestrator for managing simulation between Agent, User, and Environment.
 
         Args:
-            domain: The domain name of the simulation (e.g., 'airline', 'retail', 'telecom').
-            agent: The agent instance.
-            user: The user instance.
-            environment: The environment instance that handles tool execution.
+            domain: The domain name of the simulation (e.g., 'airline').
+            agent: The agent instance that will respond to user requests and make tool calls.
+            user: The user instance that interacts with the agent (e.g., UserSimulator).
+            environment: The environment instance that handles tool execution and maintains state.
             task: The task specification containing initial state, goals, and evaluation criteria.
             max_steps: Maximum number of simulation steps before termination. Defaults to 100.
             max_errors: Maximum number of tool execution errors before termination. Defaults to 10.
-            seed: Optional random seed for reproducibility. Defaults to None.
+            seed: Optional random seed for reproducibility of agent and user behavior. Defaults to None.
             simulation_id: Optional simulation ID. Defaults to generated UUID.
+            validate_communication: If True, validates communication protocol rules (e.g., no mixed
+                                   messages with both text and tool calls). Defaults to False.
             timeout: Maximum wallclock time in seconds. None means no timeout.
-            call_context: Resolved language, persona and scoring context of a
-                runner-built call; None for hand-built orchestrators.
         """
-        self.call_context = call_context
         self.domain = domain
-        self.agent: BaseAgentT = agent
-        self.user: BaseUserT = user
+        self.agent: AgentT = agent
+        self.user: UserT = user
         self.environment = environment
         self.task = task
         self.seed = seed
         self.simulation_id = simulation_id or str(uuid.uuid4())
+        self.validate_communication = validate_communication
 
         # State tracking
         self.agent_state: Optional[Any] = None
         self.user_state: Optional[UserState] = None
+        self.trajectory: list[Message] = []
+
+        # Turn-based routing state
+        self.from_role: Optional[Role] = None
+        self.to_role: Optional[Role] = None
+        self.message: Optional[Message] = None
 
         # Termination tracking
         self.max_steps: int = max_steps
@@ -143,133 +147,30 @@ class BaseOrchestrator(ABC, Generic[BaseAgentT, BaseUserT, TrajectoryItemT]):
         self._run_start_time: Optional[str] = None
         self._run_start_perf: Optional[float] = None
 
-    @property
-    def initial_agent_message(self) -> Optional[AssistantMessage]:
-        """The call's greeting for this mode; None uses the ordinary default."""
-        if self.call_context is None:
-            return None
-        return AssistantMessage(
-            role="assistant", content=self.call_context.language.agent_greeting
-        )
+        self._validate_participants()
 
-    @abstractmethod
-    def initialize(self) -> None:
+    def _validate_participants(self):
         """
-        Initialize the orchestrator for simulation.
-
-        Subclasses must implement mode-specific initialization:
-        - Set up environment state
-        - Initialize agent and user states
-        - Set up initial messages/chunks
-        """
-        pass
-
-    @abstractmethod
-    def step(self) -> None:
-        """
-        Perform one step of the simulation.
-
-        Subclasses implement their communication pattern:
-        - Half-duplex: Turn-based message passing
-        - Full-duplex: Simultaneous chunk generation
-        """
-        pass
-
-    @abstractmethod
-    def get_trajectory(self) -> list[TrajectoryItemT]:
-        """
-        Get the trajectory of the simulation.
-
-        Returns:
-            List of trajectory items. Type depends on orchestrator mode:
-            - Orchestrator (half-duplex): list[Message]
-            - FullDuplexOrchestrator: list[Tick]
-        """
-        pass
-
-    @abstractmethod
-    def get_messages(self) -> list[Message]:
-        """
-        Get all messages from the simulation as a flat list.
-
-        This provides a consistent way to get messages regardless of orchestrator mode.
-        For half-duplex, this is the same as get_trajectory().
-        For full-duplex, this returns linearized messages from all ticks.
-
-        Returns:
-            List of all messages sorted by timestamp with turn_idx assigned.
-        """
-        pass
-
-    @abstractmethod
-    def _validate_mode_compatibility(self) -> None:
-        """
-        Validate that the agent and user support this communication mode.
+        Validate that the agent and user support turn-based communication.
 
         Raises:
-            ValueError: If agent or user don't support the required mode.
+            ValueError: If agent or user don't implement generate_next_message.
         """
-        pass
+        if not hasattr(self.agent, "generate_next_message"):
+            raise ValueError(
+                f"Agent {self.agent.__class__.__name__} must have 'generate_next_message' method."
+            )
 
-    @abstractmethod
-    def _check_termination(self) -> None:
-        """
-        Check for termination conditions specific to this communication mode.
+        if not hasattr(self.user, "generate_next_message"):
+            raise ValueError(
+                f"User {self.user.__class__.__name__} must have 'generate_next_message' method."
+            )
 
-        Sets self.done and self.termination_reason if termination conditions are met.
-        """
-        pass
-
-    @abstractmethod
-    def _finalize(self) -> SimulationRun:
-        """
-        Finalize the simulation and create the SimulationRun result.
-
-        Called after the simulation loop completes. Should:
-        - Send stop signals to agent and user
-        - Calculate costs
-        - Build and return SimulationRun
-
-        Returns:
-            SimulationRun with all simulation data.
-        """
-        pass
-
-    def _check_timeout(self) -> None:
-        if (
-            self.timeout is not None
-            and self._run_start_perf is not None
-            and not self.done
-        ):
-            elapsed = time.perf_counter() - self._run_start_perf
-            if elapsed >= self.timeout:
-                self.done = True
-                self.termination_reason = TerminationReason.TIMEOUT
-                logger.info(
-                    f"Simulation timed out after {elapsed:.1f}s (timeout={self.timeout}s)"
-                )
-
-    def _cleanup(self) -> None:
-        """Best-effort cleanup of agent and user resources.
-
-        Called from the ``finally`` block of :meth:`run` so that WebSocket
-        connections, background threads, and other resources are released
-        even when ``step()`` raises an unexpected exception.
-
-        On the normal (non-error) path ``_finalize()`` handles cleanup
-        as part of building the result, so this method is a no-op.
-        """
-        try:
-            if hasattr(self, "agent") and self.agent is not None:
-                self.agent.stop(None, getattr(self, "agent_state", None))
-        except Exception as e:
-            logger.warning(f"Error during agent cleanup: {e}")
-
-        try:
-            if hasattr(self, "user") and self.user is not None:
-                self.user.stop(None, getattr(self, "user_state", None))
-        except Exception as e:
-            logger.warning(f"Error during user cleanup: {e}")
+        logger.info(
+            f"Orchestrator initialized with "
+            f"agent={self.agent.__class__.__name__}, "
+            f"user={self.user.__class__.__name__}"
+        )
 
     def run(self) -> SimulationRun:
         """
@@ -304,198 +205,41 @@ class BaseOrchestrator(ABC, Generic[BaseAgentT, BaseUserT, TrajectoryItemT]):
                 )
                 self._cleanup()
 
-    def _initialize_environment(
-        self,
-        initialization_data: Optional[InitializationData],
-        initialization_actions: Optional[list[EnvFunctionCall]],
-        message_history: list[Message],
-    ) -> None:
+    def _check_timeout(self) -> None:
+        if (
+            self.timeout is not None
+            and self._run_start_perf is not None
+            and not self.done
+        ):
+            elapsed = time.perf_counter() - self._run_start_perf
+            if elapsed >= self.timeout:
+                self.done = True
+                self.termination_reason = TerminationReason.TIMEOUT
+                logger.info(
+                    f"Simulation timed out after {elapsed:.1f}s (timeout={self.timeout}s)"
+                )
+
+    def _cleanup(self) -> None:
+        """Best-effort cleanup of agent and user resources.
+
+        Called from the ``finally`` block of :meth:`run` so that agent and
+        user resources are released even when ``step()`` raises an
+        unexpected exception.
+
+        On the normal (non-error) path ``_finalize()`` handles cleanup
+        as part of building the result, so this method is a no-op.
         """
-        Initialize the environment with the given state.
+        try:
+            if hasattr(self, "agent") and self.agent is not None:
+                self.agent.stop(None, getattr(self, "agent_state", None))
+        except Exception as e:
+            logger.warning(f"Error during agent cleanup: {e}")
 
-        Args:
-            initialization_data: Optional data to initialize environment state.
-            initialization_actions: Optional actions to execute during initialization.
-            message_history: Message history for context.
-        """
-        self.environment.set_state(
-            initialization_data=initialization_data,
-            initialization_actions=initialization_actions,
-            message_history=message_history,
-        )
-
-    def _execute_tool_calls(self, tool_calls: list[ToolCall]) -> list[ToolMessage]:
-        """
-        Execute tool calls and return results.
-
-        Args:
-            tool_calls: List of tool calls to execute.
-
-        Returns:
-            List of ToolMessage results from the environment.
-        """
-        tool_results = []
-        for tool_call in tool_calls:
-            tool_result = self.environment.get_response(tool_call)
-            if tool_result.error:
-                self.num_errors += 1
-            tool_results.append(tool_result)
-        return tool_results
-
-    def _wrap_tool_results(self, tool_results: list[ToolMessage]) -> Message:
-        """
-        Wrap tool results in appropriate message type.
-
-        Args:
-            tool_results: List of tool message results.
-
-        Returns:
-            Single ToolMessage if one result, MultiToolMessage if multiple.
-        """
-        if len(tool_results) > 1:
-            return MultiToolMessage(role="tool", tool_messages=tool_results)
-        return tool_results[0]
-
-    def _get_environment_info(self) -> EnvironmentInfo:
-        """Get the environment info."""
-        return self.environment.get_info()
-
-
-class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
-    """
-    Orchestrator for half-duplex (turn-based) simulation.
-
-    Passes messages between the Agent, User, and Environment in alternating turns.
-
-    Communication Protocol:
-        The orchestrator manages message flow between three roles: AGENT, USER, and ENV(ironment).
-        Messages are passed in a turn-based manner following these rules:
-
-        Message Types:
-            - AssistantMessage: Sent by the agent
-            - UserMessage: Sent by the user
-            - ToolMessage: Sent by the environment in response to tool calls
-            - MultiToolMessage: Wraps multiple tool messages when multiple tool calls are made
-
-        Message Content Rules:
-            1. Messages must contain EITHER text content OR tool calls, never both
-            2. Messages cannot be empty (must have either text or tool calls)
-            3. Tool calls must be followed by corresponding tool messages from the environment
-
-        Communication Flow:
-            - AGENT -> USER: Agent sends text response to user
-            - AGENT -> ENV: Agent makes tool call(s) to environment
-            - USER -> AGENT: User sends text message to agent
-            - USER -> ENV: User makes tool call(s) to environment
-            - ENV -> AGENT: Environment returns tool results to agent (after agent's tool call)
-            - ENV -> USER: Environment returns tool results to user (after user's tool call)
-
-        Solo Mode:
-            In solo mode, the user is replaced by a DummyUser and the agent operates autonomously:
-            - Agent can ONLY send tool calls (no text messages to user)
-            - Exception: Agent can send stop signal (###STOP###) to end simulation
-            - Agent interacts exclusively with the environment until completion
-
-        Termination:
-            Simulation ends when:
-            - Agent sends stop signal (###STOP###)
-            - User sends stop signal
-            - Maximum steps (max_steps) reached
-            - Maximum errors (max_errors) reached
-            - Communication protocol violation detected (if validate_communication=True)
-    """
-
-    def __init__(
-        self,
-        domain: str,
-        agent: AgentT,
-        user: UserT,
-        environment: Environment,
-        task: Task,
-        max_steps: int = 100,
-        max_errors: int = 10,
-        seed: Optional[int] = None,
-        solo_mode: bool = False,
-        simulation_id: Optional[str] = None,
-        validate_communication: bool = False,
-        timeout: Optional[float] = None,
-        call_context: Optional[CallContext] = None,
-    ):
-        """
-        Initialize the Orchestrator for managing simulation between Agent, User, and Environment.
-
-        This orchestrator implements half-duplex (turn-based) communication where agent and user
-        alternate sending complete messages. For streaming/full-duplex communication, use
-        FullDuplexOrchestrator instead.
-
-        Args:
-            domain: The domain name of the simulation (e.g., 'airline', 'retail', 'telecom').
-            agent: The agent instance that will respond to user requests and make tool calls.
-            user: The user instance that interacts with the agent (can be UserSimulator or DummyUser).
-            environment: The environment instance that handles tool execution and maintains state.
-            task: The task specification containing initial state, goals, and evaluation criteria.
-            max_steps: Maximum number of simulation steps before termination. Defaults to 100.
-            max_errors: Maximum number of tool execution errors before termination. Defaults to 10.
-            seed: Optional random seed for reproducibility of agent and user behavior. Defaults to None.
-            solo_mode: If True, agent operates without user interaction (only tool calls allowed).
-                      Requires agent to be LLMSoloAgent or GymAgent, and user to be DummyUser.
-                      Defaults to False.
-            validate_communication: If True, validates communication protocol rules (e.g., no mixed
-                                   messages with both text and tool calls). Defaults to False.
-            timeout: Maximum wallclock time in seconds. None means no timeout.
-            call_context: Resolved language, persona and scoring context.
-        """
-        # Initialize base class
-        super().__init__(
-            domain=domain,
-            agent=agent,
-            user=user,
-            environment=environment,
-            task=task,
-            max_steps=max_steps,
-            max_errors=max_errors,
-            seed=seed,
-            simulation_id=simulation_id,
-            timeout=timeout,
-            call_context=call_context,
-        )
-
-        # Half-duplex specific attributes
-        self.mode = CommunicationMode.HALF_DUPLEX
-        self.trajectory: list[Message] = []
-        self.solo_mode = solo_mode
-        self.validate_communication = validate_communication
-
-        # Turn-based routing state
-        self.from_role: Optional[Role] = None
-        self.to_role: Optional[Role] = None
-        self.message: Optional[Message] = None
-
-        # Validate mode compatibility
-        self._validate_mode_compatibility()
-
-    def _validate_mode_compatibility(self):
-        """
-        Validate that the agent and user support half-duplex communication.
-
-        Raises:
-            ValueError: If agent or user don't support half-duplex mode.
-        """
-        if not hasattr(self.agent, "generate_next_message"):
-            raise ValueError(
-                f"Agent {self.agent.__class__.__name__} must have 'generate_next_message' method."
-            )
-
-        if not hasattr(self.user, "generate_next_message"):
-            raise ValueError(
-                f"User {self.user.__class__.__name__} must have 'generate_next_message' method."
-            )
-
-        logger.info(
-            f"Orchestrator initialized in HALF_DUPLEX mode (turn-based) with "
-            f"agent={self.agent.__class__.__name__}, "
-            f"user={self.user.__class__.__name__}"
-        )
+        try:
+            if hasattr(self, "user") and self.user is not None:
+                self.user.stop(None, getattr(self, "user_state", None))
+        except Exception as e:
+            logger.warning(f"Error during user cleanup: {e}")
 
     def initialize(self):
         """
@@ -521,16 +265,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
 
         # Add timestamps to the message history
         message_history = self._add_timestamps(message_history)
-
-        if self.solo_mode:
-            assert self.environment.solo_mode, "Environment should be in solo mode"
-            assert (
-                isinstance(self.agent, LLMSoloAgent)
-                or self.agent.__class__.__name__ == "GymAgent"
-            ), "Agent must be a LLMSoloAgent or GymAgent in solo mode"
-            assert isinstance(self.user, DummyUser), (
-                "User must be a DummyUser in solo mode"
-            )
 
         # Initialize Environment state
         self._initialize_environment(
@@ -643,44 +377,17 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
         else:
             # No message history - initialize fresh
             self.user_state = self.user.get_init_state()
-            if not self.solo_mode:
-                first_message = deepcopy(
-                    self.initial_agent_message or DEFAULT_FIRST_AGENT_MESSAGE
-                )
-                if self.task.agent_opener is not None:
-                    first_message.content = self.task.agent_opener
-                first_message.timestamp = get_now()
-                self.agent_state = self.agent.get_init_state(
-                    message_history=[first_message]
-                )
-                self.trajectory = [first_message]
-                self.message = first_message
-                self.from_role = Role.AGENT
-                self.to_role = Role.USER
-            else:
-                self.agent_state = self.agent.get_init_state()
-                first_message, self.agent_state = self.agent.generate_next_message(
-                    None, self.agent_state
-                )
-                self.trajectory = [first_message]
-                self.message = first_message
-                # In solo mode, there is no user, so if the message is not a tool call, then we end and report an agent error
-                if not first_message.is_tool_call():
-                    self.from_role = Role.AGENT
-                    self.to_role = Role.USER
-                    self.done = True
-                    if self.agent.is_stop(first_message):
-                        # If the agent is stopping (###STOP###)
-                        self.termination_reason = TerminationReason.AGENT_STOP
-                    else:
-                        self.termination_reason = TerminationReason.AGENT_ERROR
-                else:
-                    self.from_role = Role.AGENT
-                    self.to_role = Role.ENV
-                    self.done = self.agent.is_stop(first_message)
-                    if self.done:
-                        self.to_role = Role.USER  # FIXIT: For now, we assume last message cannot be to the environment
-                        self.termination_reason = TerminationReason.AGENT_STOP
+            first_message = deepcopy(DEFAULT_FIRST_AGENT_MESSAGE)
+            if self.task.agent_opener is not None:
+                first_message.content = self.task.agent_opener
+            first_message.timestamp = get_now()
+            self.agent_state = self.agent.get_init_state(
+                message_history=[first_message]
+            )
+            self.trajectory = [first_message]
+            self.message = first_message
+            self.from_role = Role.AGENT
+            self.to_role = Role.USER
 
         if self.validate_communication:
             self.check_communication_error()
@@ -693,7 +400,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
         Communication errors occur when agents or users violate the communication protocol rules:
         - Empty messages (no text content and no tool calls)
         - Mixed messages (both text content and tool calls in the same message)
-        - Solo mode violations (agents sending text content instead of tool calls)
 
         When a communication error is detected:
         - Sets `self.done = True` to terminate the simulation
@@ -719,7 +425,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
         Validates that messages follow the communication rules:
         1. Messages must have either text content OR tool calls, not both
         2. Messages cannot be empty (no text content and no tool calls)
-        3. In solo mode, agents can only send tool calls (except for stop messages)
 
         Raises:
             AgentError: When the agent violates communication rules
@@ -745,16 +450,9 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
                 f"{self.from_role.value} sent both text content and tool calls. {self.message}"
             )
 
-        # Check if the agent is allowed to send a message to the user
-        if self.from_role == Role.AGENT and self.solo_mode:
-            if self.message.has_text_content() and not self.agent.is_stop(self.message):
-                raise exception_type(
-                    f"{self.from_role.value} can only send tool calls. {self.message}"
-                )
-
     def _check_termination(self) -> None:
         """
-        Check for half-duplex specific termination conditions.
+        Check for termination conditions.
 
         Only checks max_steps/max_errors/timeout when not waiting for environment response.
         """
@@ -772,7 +470,7 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
 
     def _finalize(self) -> SimulationRun:
         """
-        Finalize the half-duplex simulation and create the SimulationRun result.
+        Finalize the simulation and create the SimulationRun result.
 
         Sends stop signals to agent and user, calculates costs, and builds the result.
 
@@ -809,16 +507,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
         duration = time.perf_counter() - self._run_start_perf
         messages = self.get_trajectory()
         agent_cost, user_cost = get_cost(messages)
-        # Update voice metadata with final turn_idx values
-        self._finalize_voice_metadata(messages)
-
-        # Get speech_environment from user's voice_settings if available
-        speech_environment = None
-        if (
-            hasattr(self.user, "voice_settings")
-            and self.user.voice_settings is not None
-        ):
-            speech_environment = self.user.voice_settings.speech_environment
 
         simulation_run = SimulationRun(
             id=self.simulation_id,
@@ -832,14 +520,12 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             agent_cost=agent_cost,
             messages=messages,
             seed=self.seed,
-            mode=self.mode.value,
-            speech_environment=speech_environment,
         )
         return simulation_run
 
     def step(self):
         """
-        Perform one step of the simulation using half-duplex (turn-based) communication.
+        Perform one step of the simulation (turn-based communication).
 
         Sends self.message from self.from_role to self.to_role.
         This can either be a message from agent to user/environment, environment to agent,
@@ -862,8 +548,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             if UserSimulator.is_stop(user_msg):
                 self.done = True
                 self.termination_reason = TerminationReason.USER_STOP
-            # Update voice metadata if audio was generated
-            self._update_voice_metadata(user_msg)
 
             self.trajectory.append(user_msg)
             self.message = user_msg
@@ -880,8 +564,7 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
                 self.message, self.agent_state
             )
             agent_msg.validate()
-            configured_stop = self._is_configured_stop_tool_call(agent_msg)
-            if self.agent.is_stop(agent_msg) and not configured_stop:
+            if self.agent.is_stop(agent_msg):
                 self.done = True
                 self.termination_reason = TerminationReason.AGENT_STOP
 
@@ -889,45 +572,13 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             self.message = agent_msg
             self.from_role = Role.AGENT
             if agent_msg.is_tool_call():
-                if configured_stop and len(agent_msg.tool_calls) > 1:
-                    # A terminating call must have its own turn. Apply this
-                    # protocol only to agents with domain-configured stop tools.
-                    # Keep a matched rejection for each attempted call so replay
-                    # preserves the trace without executing the rejected writes.
-                    tool_results = [
-                        ToolMessage(
-                            id=call.id,
-                            role="tool",
-                            requestor=call.requestor,
-                            content="Call rejected: a terminating tool must be "
-                            "called on its own turn. No bundled calls executed.",
-                            error=True,
-                            execution_status="rejected",
-                        )
-                        for call in agent_msg.tool_calls
-                    ]
-                    self.trajectory.extend(tool_results)
-                    self.message = self._wrap_tool_results(tool_results)
-                    self.done = True
-                    self.termination_reason = TerminationReason.AGENT_STOP
-                    self.from_role = Role.ENV
-                    self.to_role = Role.AGENT
-                else:
-                    self.to_role = Role.ENV
+                self.to_role = Role.ENV
             else:
                 self.to_role = Role.USER
-                # In solo mode, there is no user, so if the message is not a tool call and not a stop, then we end and report an agent error
-                if self.solo_mode and not self.agent.is_stop(agent_msg):
-                    self.done = True
-                    self.termination_reason = TerminationReason.AGENT_ERROR
         # AGENT/USER -> ENV
         elif self.from_role in [Role.AGENT, Role.USER] and self.to_role == Role.ENV:
             if not self.message.is_tool_call():
                 raise ValueError("Agent or User should send tool call to environment")
-            configured_stop = (
-                self.from_role == Role.AGENT
-                and self._is_configured_stop_tool_call(self.message)
-            )
             tool_results = self._execute_tool_calls(self.message.tool_calls)
             assert len(self.message.tool_calls) == len(tool_results), (
                 "Number of tool calls and tool messages should be the same"
@@ -936,9 +587,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             self.message = self._wrap_tool_results(tool_results)
             self.to_role = self.from_role
             self.from_role = Role.ENV
-            if configured_stop:
-                self.done = True
-                self.termination_reason = TerminationReason.AGENT_STOP
         else:
             raise ValueError(
                 f"Invalid role combination. From role: {self.from_role}, To role: {self.to_role}"
@@ -947,11 +595,6 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             self.check_communication_error()
         self.step_count += 1
         self.environment.sync_tools()
-
-    def _is_configured_stop_tool_call(self, message: Message) -> bool:
-        """Whether a call uses an explicitly configured domain termination tool."""
-        names = getattr(self.agent, "additional_stop_tool_names", frozenset())
-        return any(call.name in names for call in message.tool_calls or [])
 
     def get_trajectory(self) -> list[Message]:
         """
@@ -971,9 +614,7 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
 
     def get_messages(self) -> list[Message]:
         """
-        Get all messages from the simulation.
-
-        For half-duplex mode, this is the same as get_trajectory().
+        Get all messages from the simulation (same as get_trajectory()).
         """
         return self.get_trajectory()
 
@@ -1034,51 +675,58 @@ class Orchestrator(BaseOrchestrator[AgentT, UserT, Message]):
             )
         return message_history
 
-    def _update_voice_metadata(self, message: UserMessage) -> None:
+    def _initialize_environment(
+        self,
+        initialization_data: Optional[InitializationData],
+        initialization_actions: Optional[list[EnvFunctionCall]],
+        message_history: list[Message],
+    ) -> None:
         """
-        Update voice metadata with simulation ID.
-        Note: turn_idx is not available until get_trajectory() is called.
+        Initialize the environment with the given state.
+
+        Args:
+            initialization_data: Optional data to initialize environment state.
+            initialization_actions: Optional actions to execute during initialization.
+            message_history: Message history for context.
         """
-        # Check if message has voice UUID (set during synthesis)
-        if (
-            hasattr(message, "_voice_uuid")
-            and message.audio_path
-            and self.simulation_id
-        ):
-            voice_uuid = message._voice_uuid
-            audio_dir = Path(message.audio_path).parent
-            metadata_path = audio_dir / "metadata.json"
+        self.environment.set_state(
+            initialization_data=initialization_data,
+            initialization_actions=initialization_actions,
+            message_history=message_history,
+        )
 
-            metadata = {
-                "simulation_id": self.simulation_id,
-                "timestamp": message.timestamp,
-                "turn_uuid": voice_uuid,
-            }
-
-            with open(metadata_path, "w") as f:
-                json.dump(metadata, f, indent=2)
-
-    def _finalize_voice_metadata(self, messages: list[Message]) -> None:
+    def _execute_tool_calls(self, tool_calls: list[ToolCall]) -> list[ToolMessage]:
         """
-        Update all voice metadata files with final turn_idx values.
+        Execute tool calls and return results.
+
+        Args:
+            tool_calls: List of tool calls to execute.
+
+        Returns:
+            List of ToolMessage results from the environment.
         """
-        for msg in messages:
-            if (
-                isinstance(msg, UserMessage)
-                and hasattr(msg, "_voice_uuid")
-                and msg.audio_path
-            ):
-                audio_dir = Path(msg.audio_path).parent
-                metadata_path = audio_dir / "metadata.json"
+        tool_results = []
+        for tool_call in tool_calls:
+            tool_result = self.environment.get_response(tool_call)
+            if tool_result.error:
+                self.num_errors += 1
+            tool_results.append(tool_result)
+        return tool_results
 
-                if metadata_path.exists():
-                    # Read existing metadata
-                    with open(metadata_path, "r") as f:
-                        metadata = json.load(f)
+    def _wrap_tool_results(self, tool_results: list[ToolMessage]) -> Message:
+        """
+        Wrap tool results in appropriate message type.
 
-                    # Update with turn_idx
-                    metadata["turn_idx"] = msg.turn_idx
+        Args:
+            tool_results: List of tool message results.
 
-                    # Write back
-                    with open(metadata_path, "w") as f:
-                        json.dump(metadata, f, indent=2)
+        Returns:
+            Single ToolMessage if one result, MultiToolMessage if multiple.
+        """
+        if len(tool_results) > 1:
+            return MultiToolMessage(role="tool", tool_messages=tool_results)
+        return tool_results[0]
+
+    def _get_environment_info(self) -> EnvironmentInfo:
+        """Get the environment info."""
+        return self.environment.get_info()

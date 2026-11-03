@@ -42,7 +42,6 @@ class Environment:
         policy: str,
         tools: Optional[ToolKitBase] = None,
         user_tools: Optional[ToolKitBase] = None,
-        solo_mode: bool = False,
     ):
         """
         Environment
@@ -51,15 +50,11 @@ class Environment:
             policy: The policy of the domain.
             tools: The tools available to the assistant in the domain.
             user_tools: The tools available to the user in the domain.
-            solo_mode: The agent will have access to both user and assistant tools.
         """
         self.domain_name = domain_name
         self.policy = policy
         self.tools = tools
         self.user_tools = user_tools
-        self.solo_mode = solo_mode
-        if self.solo_mode:
-            self.validate_solo_mode()
         self.sync_tools()
 
     def get_domain_name(self) -> str:
@@ -173,13 +168,8 @@ class Environment:
         Note: This does not call sync_tools.
         """
         if requestor == "user":
-            if self.solo_mode:
-                raise ValueError("User tool calls are not allowed in solo mode")
             return self.use_user_tool(tool_name=tool_name, **kwargs)
         elif requestor == "assistant":
-            if self.solo_mode and self.user_tools is not None:
-                if self.user_tools.has_tool(tool_name):
-                    return self.use_user_tool(tool_name=tool_name, **kwargs)
             return self.use_tool(tool_name=tool_name, **kwargs)
         else:
             raise ValueError(f"Invalid requestor: {requestor}")
@@ -311,10 +301,6 @@ class Environment:
                 normalization); the state mutation is applied identically
                 either way.
         """
-        if self.solo_mode:
-            assert all(
-                [not isinstance(message, UserMessage) for message in message_history]
-            ), "User messages are not allowed in solo mode"
 
         def get_actions_from_messages(
             messages: list[Message],
@@ -447,28 +433,6 @@ class Environment:
         if not isinstance(resp, str):
             return json.dumps(_process(resp), default=str)  # FIXME: add default=str
         return resp
-
-    def set_solo_mode(self, solo_mode: bool):
-        """
-        Set the solo mode of the environment.
-        """
-        self.solo_mode = solo_mode
-        if solo_mode:
-            self.validate_solo_mode()
-
-    def validate_solo_mode(self) -> None:
-        """
-        Validate the tool call in solo mode.
-        """
-        assistant_tool_names = set(self.tools.get_tools().keys())
-        user_tool_names = (
-            set(self.user_tools.get_tools().keys())
-            if self.user_tools is not None
-            else set()
-        )
-        overlap = assistant_tool_names & user_tool_names
-        if len(overlap) > 0:
-            raise ValueError(f"Tool names overlap: {overlap}")
 
     def get_response(self, message: ToolCall) -> ToolMessage:
         """

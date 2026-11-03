@@ -2,9 +2,9 @@
 Checkpoint save/resume logic for batch simulation runs.
 
 Supports two storage formats:
-- "json": single monolithic results.json (default for text runs).
+- "json": single monolithic results.json (default).
 - "dir": metadata in results.json + individual simulation files in
-  simulations/ (default for voice runs — O(1) append, O(1) replace).
+  simulations/ (O(1) append, O(1) replace; see ``tau2 convert-results``).
 
 Format is auto-detected from on-disk state. New runs use the format specified
 by the ``results_format`` parameter (default "json" for backward compat).
@@ -96,72 +96,8 @@ def try_resume(
     fmt = Results._detect_format(save_path)
     prev_simulation_results = Results.load(save_path)
 
-    if (
-        prev_simulation_results.info.voice_instruction_prompt_version
-        != simulation_results.info.voice_instruction_prompt_version
-    ):
-        raise ValueError(
-            "Voice instruction prompt revision changed; use a new output path"
-        )
-
-    from tau2.multilingual.runtime import validate_language_resume
-
-    validate_language_resume(prev_simulation_results.info, simulation_results.info)
-
-    # Versioned benchmark/evaluator contracts may never mix, even with auto-resume.
     previous_info = prev_simulation_results.info
     current_info = simulation_results.info
-    if (
-        prev_simulation_results.info.elicitation is not None
-        or simulation_results.info.elicitation is not None
-    ):
-        condition_fields = {
-            "elicitation",
-            "elicitation_scoring_version",
-            "elicitation_prompt_version",
-            "elicitation_catalog_version",
-            "elicitation_spell_detection_version",
-            "seed",
-            "max_steps",
-            "max_errors",
-            "user_info",
-            "agent_info",
-            "environment_info",
-            "audio_native_config",
-            "speech_complexity",
-        }
-        # Compare the saved JSON contract: provider models may omit optional
-        # fields when serialized even when their in-memory defaults include them.
-        previous_condition = prev_simulation_results.info.model_dump(
-            include=condition_fields, mode="json"
-        )
-        requested_condition = simulation_results.info.model_dump(
-            include=condition_fields, mode="json"
-        )
-        if previous_condition != requested_condition:
-            raise ValueError(
-                "Cannot resume elicitation with different benchmark conditions; "
-                "use a new save_to name."
-            )
-    previous_benchmark = previous_info.benchmark
-    current_benchmark = current_info.benchmark
-    benchmark_selection_changed = previous_benchmark != current_benchmark
-    if previous_benchmark is not None and current_benchmark is not None:
-        if not set(previous_benchmark.selected_task_ids) <= set(
-            current_benchmark.selected_task_ids
-        ):
-            raise ValueError("Cannot remove tasks from a resumed benchmark")
-        benchmark_changed = previous_benchmark.model_dump(
-            exclude={"selected_task_ids"}
-        ) != current_benchmark.model_dump(exclude={"selected_task_ids"})
-    else:
-        benchmark_changed = benchmark_selection_changed
-    if benchmark_changed:
-        raise ValueError(
-            "Benchmark selection or effective conditions changed; use a new output path"
-        )
-    if previous_info.domain_tools_version != current_info.domain_tools_version:
-        raise ValueError("Domain tools revision changed; use a new output path")
     if previous_info.communicate_scoring != current_info.communicate_scoring:
         raise ValueError("Communicate-info scorer changed; use a new output path")
 
@@ -260,27 +196,11 @@ def try_resume(
         )
         tasks = prev_simulation_results.tasks
 
-    # Validated selection extensions need their provenance in both the worker
-    # context and saved Info. Keep prior metadata for completed calls intact.
-    # (Results that predate recorded languages carry no per-task contexts.)
-    if current_info.language is not None:
-        for task_id in added_task_ids:
-            previous_info.language_tasks[task_id] = current_info.language_tasks[
-                task_id
-            ].model_copy(deep=True)
-    language_selection_changed = previous_info.num_trials != current_info.num_trials
+    trials_changed = previous_info.num_trials != current_info.num_trials
     previous_info.num_trials = current_info.num_trials
 
-    if benchmark_selection_changed:
-        previous_info.benchmark = current_benchmark.model_copy(deep=True)
-
-    # Re-save checkpoint if anything changed so disk and worker metadata agree.
-    if (
-        added_task_ids
-        or infra_error_count > 0
-        or language_selection_changed
-        or benchmark_selection_changed
-    ):
+    # Re-save checkpoint if anything changed so disk and in-memory metadata agree.
+    if added_task_ids or infra_error_count > 0 or trials_changed:
         if fmt == "dir":
             for sim_id in infra_error_sim_ids:
                 sim_file = sims_dir / f"{sim_id}.json"

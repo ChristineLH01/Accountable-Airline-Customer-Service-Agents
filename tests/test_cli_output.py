@@ -1,110 +1,70 @@
-"""Compact CLI output: tables by default, full JSON on request, clean --help."""
+"""Clean CLI output: --help prints only usage, and --dry-run prints the config."""
 
+import json
 import subprocess
 import sys
 
 import pytest
 
-from tau2.data_model.benchmark import BenchmarkSummary, CellSummary
-from tau2.utils.table import format_fraction, format_table
 
-
-def test_format_table_aligns_text_left_and_numbers_right():
-    table = format_table(
-        ["measure", "calls", "pass"],
-        [["naturalness", 200, "91.0%"], ["tool_use", 3, "-"]],
-    )
-    assert table.splitlines() == [
-        "measure      calls  pass",
-        "-----------  -----  -----",
-        "naturalness    200  91.0%",
-        "tool_use         3  -",
-    ]
-    assert format_fraction(None) == "-"
-    assert format_fraction(0.5) == "50.0%"
-
-
-def _cell(language, domain, expected, scored, score):
-    return CellSummary(
-        language=language,
-        domain=domain,
-        expected_trials=expected,
-        scored_trials=scored,
-        error_trials=0,
-        unscored_trials=0,
-        missing_trials=expected - scored,
-        complete=expected == scored,
-        score=score if expected == scored else None,
-        observed_score=score,
-    )
-
-
-def test_benchmark_summary_table_skips_cells_outside_the_requested_scope():
-    from tau2.runner.report import render_summary
-
-    summary = BenchmarkSummary(
-        benchmark_version="voice-v2",
-        frame_revision="fixture",
-        condition_fingerprint=None,
-        expected_trials=7,
-        scored_trials=5,
-        error_trials=0,
-        unscored_trials=0,
-        missing_trials=2,
-        complete=False,
-        score=None,
-        observed_score=0.6,
-        by_language={},
-        by_domain={},
-        cells=[
-            _cell("en", "retail", 5, 5, 0.6),
-            _cell("es", "retail", 2, 0, None),
-            _cell("pt", "retail", 0, 0, None),
-        ],
-    )
-    assert render_summary(summary).splitlines() == [
-        "language  domain  scored  errors  unscored  missing  score  observed  complete",
-        "--------  ------  ------  ------  --------  -------  -----  --------  --------",
-        "en        retail  5/5          0         0        0  60.0%  60.0%     yes",
-        "es        retail  0/2          0         0        2  -      -         no",
-    ]
-
-
-def test_benchmark_plan_table_lists_selected_cells(tmp_path):
-    from tau2.data_model.run_config import AudioNativeConfig
-    from tau2.data_model.simulation import VoiceRunConfig
-    from tau2.runner.presets import BenchmarkRequest, resolve_benchmark
-    from tau2.runner.report import render_plan
-
-    plan = resolve_benchmark(
-        BenchmarkRequest(
-            output=tmp_path,
-            template=VoiceRunConfig(audio_native_config=AudioNativeConfig()),
-            languages=["en", "pt"],
-            domains=["retail"],
-        )
-    )
-    assert render_plan(plan).splitlines() == [
-        "language  domain  tasks  trials  calls",
-        "--------  ------  -----  ------  -----",
-        "en        retail     50       1     50",
-        "pt        retail     50       1     50",
-    ]
-
-
-@pytest.mark.parametrize(
-    "command",
-    [["--help"], ["judges", "suite", "--help"], ["run", "--help"]],
-    ids=" ".join,
-)
-def test_help_is_only_help(command):
-    """Importing the CLI must not log the registry, data directory or noise banks."""
-    completed = subprocess.run(
+def _run_cli(*command: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
         [sys.executable, "-c", "from tau2.cli import main; main()", *command],
         capture_output=True,
         text=True,
         timeout=300,
         check=True,
     )
+
+
+@pytest.mark.parametrize(
+    "command",
+    [["--help"], ["run", "--help"], ["view", "--help"], ["review", "--help"]],
+    ids=" ".join,
+)
+def test_help_is_only_help(command):
+    """Importing the CLI must not log the registry or data directory."""
+    completed = _run_cli(*command)
     assert completed.stdout.startswith("usage: ")
     assert completed.stderr == ""
+
+
+def test_dry_run_prints_resolved_airline_config():
+    completed = _run_cli(
+        "run",
+        "--dry-run",
+        "--num-tasks",
+        "3",
+        "--user-llm",
+        "openai/gpt-5.5",
+        "--user-llm-args",
+        '{"reasoning_effort": "low"}',
+        "--communicate-scorer",
+        "substring",
+    )
+    config = json.loads(completed.stdout)
+    assert config["domain"] == "airline"
+    assert config["agent"] == "llm_agent"
+    assert config["num_tasks"] == 3
+    assert config["llm_user"] == "openai/gpt-5.5"
+    assert config["llm_args_user"] == {"reasoning_effort": "low"}
+    assert config["communicate_scoring"]["scorer"] == "substring"
+
+
+def test_run_rejects_unknown_domain():
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from tau2.cli import main; main()",
+            "run",
+            "--domain",
+            "retail",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert completed.returncode != 0
+    assert "invalid choice: 'retail'" in completed.stderr

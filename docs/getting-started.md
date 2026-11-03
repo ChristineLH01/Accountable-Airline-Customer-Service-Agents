@@ -1,258 +1,147 @@
 # Getting Started
 
-This guide walks you through installing τ-bench, configuring API keys, and running your first evaluation.
+This guide installs the framework, sets up API keys and runs a first
+evaluation. The framework covers one benchmark: an LLM customer-service
+agent and an LLM user simulator talk turn by turn (text, English) on the
+**airline** domain's 50 tasks.
 
 ## Prerequisites
 
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) — Python package and project manager
-- Python 3.12+ (uv will download it automatically if not present)
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), the Python
+  package and project manager
+- Python 3.12 or 3.13 (uv downloads the pinned 3.12 automatically if needed)
 
-## Installation
+## Install
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/sierra-research/tau2-bench
-cd tau2-bench
-```
-
-### 2. Install τ-bench
+From the repository root:
 
 ```bash
-uv sync                        # core, including scaffolded intake text runs
+UV_FROZEN=1 uv sync --extra dev
 ```
 
-This creates a virtual environment, installs core dependencies from the lockfile, and enables the `tau2` command. The Python version is pinned via `.python-version` (3.12) — uv will download it automatically if needed.
-
-#### Optional extras
-
-Install the extras you need:
+This creates `.venv`, installs the locked dependencies plus the dev tools
+(pytest, ruff, pre-commit), and provides the `tau2` command. Set
+`UV_FROZEN=1` (or pass `--frozen`) on every `uv` command so uv never
+rewrites `uv.lock`; the examples below assume it is exported:
 
 ```bash
-uv sync --extra voice          # + voice/audio-native features
-uv sync --extra knowledge      # + banking_knowledge domain (retrieval pipeline)
-uv sync --extra gym            # + gymnasium RL interface
-uv sync --extra dev            # + pytest, ruff, pre-commit (required for contributing)
-uv sync --extra experiments    # + plotting libs for src/experiments/
-uv sync --all-extras           # everything
+export UV_FROZEN=1
 ```
 
-#### System dependencies (voice only)
-
-If using voice features (`--extra voice`), install:
-
-**macOS:**
-```bash
-brew install portaudio ffmpeg
-```
-
-> **Note:** If you install without `-e` mode (e.g., `uv pip install .`), you'll need to set the `TAU2_DATA_DIR` environment variable to point to your data directory:
-> ```bash
-> export TAU2_DATA_DIR=/path/to/your/tau2-bench/data
-> ```
-
-### 3. Verify your installation
+Check that the data directory is found:
 
 ```bash
 uv run tau2 check-data
 ```
 
-This checks that your data directory is correctly configured and all required files are present.
+If you install the package somewhere other than this checkout (for example
+with `uv pip install .`), point it at the data with
+`export TAU2_DATA_DIR=/path/to/repo/data`.
 
-## Setting Up API Keys
+## API keys
 
-We use [LiteLLM](https://github.com/BerriAI/litellm) to manage LLM APIs, so you can use any LLM provider supported by LiteLLM.
-
-Copy `.env.example` as `.env` and edit it to include your API keys:
-
-```bash
-cp .env.example .env
-```
-
-### Voice API Keys (for voice-enabled features)
-
-If you're using voice features, add the following to your `.env` file:
-- `ELEVENLABS_API_KEY` — for voice synthesis
-- `DEEPGRAM_API_KEY` — for voice transcription
-
-### Voice Persona Setup (for voice-enabled features)
-
-The voice pipeline uses ElevenLabs voices for the user simulator. The default voice IDs are Sierra-internal and won't work for external users. You need to create your own voices and configure them via environment variables in your `.env` file, one per language-pack persona (`TAU2_VOICE_ID_<LANG>_<PERSONA>`):
+All models are called through [OpenRouter](https://openrouter.ai), so a
+single key gives access to every model. Create one at
+[openrouter.ai/keys](https://openrouter.ai/keys), then copy the example file
+and fill it in:
 
 ```bash
-TAU2_VOICE_ID_EN_MAMADOU_DIALLO=your_voice_id_here
-TAU2_VOICE_ID_EN_PRIYA_PATIL=your_voice_id_here
+cp .env.example .env    # set OPENROUTER_API_KEY
 ```
 
-`python -m tau2.voice.scripts.setup_voices --language all` creates the voices for every voice-v2 language and prints these lines. See the [Voice Persona Setup Guide](voice-personas.md) for details and the manual ElevenLabs Voice Design steps.
+Model names on the command line (`--agent-llm`, `--user-llm`,
+`--communicate-judge`, `--review-model`) are OpenRouter model IDs such as
+`openai/gpt-6.1-sol` or `anthropic/claude-opus-4.5`; the list is at
+[openrouter.ai/models](https://openrouter.ai/models).
 
-## Running Your First Evaluation
-
-### Standard text-based evaluation (half-duplex)
+## First run
 
 ```bash
-tau2 run --domain airline --agent-llm gpt-4.1 --user-llm gpt-4.1 \
-  --num-trials 1 --num-tasks 5
+uv run tau2 run --num-tasks 5
 ```
 
-Results are saved in `data/simulations/`.
-
-### Audio native mode (voice full-duplex)
-
-> **Prerequisite:** Voice mode requires custom ElevenLabs voices for the user simulator. You must set these up before running voice evaluations. See the [Voice Persona Setup Guide](voice-personas.md) — the automated script takes care of everything in one command.
+This runs the first 5 tasks of the `base` split with the default agent and
+user simulator. Choose models and tasks explicitly with, for example:
 
 ```bash
-# One frozen retail task in each of the six voice-v2 languages: 6 calls.
-tau2 run --domain retail --audio-native --num-tasks 1 --verbose-logs
-
-# One English retail call, outside the released benchmark.
-tau2 run --domain retail --audio-native --benchmark none --language en --num-tasks 1 --verbose-logs
+uv run tau2 run --agent-llm openai/gpt-6.1-sol --user-llm openai/gpt-6.1-sol --task-ids 0 1 2 --num-trials 3
 ```
 
-`--audio-native` runs the released voice-v2 benchmark by default, so `--domain`
-and `--num-tasks` select a slice of it. `--benchmark none` makes an ordinary
-single-domain run. See [Running the benchmark](running-the-benchmark.md) for
-the full benchmark, and the [voice docs](../src/tau2/voice/README.md) for
-providers and options.
+Add `--dry-run` to print the resolved configuration without running
+anything. The released τ-bench 2.0 text benchmark used `openai/gpt-5.5`
+as the user simulator; to match it, pass
+`--user-llm openai/gpt-5.5 --user-llm-args '{"reasoning_effort": "low"}'`.
+See the [CLI reference](cli-reference.md) for every option.
 
-### Knowledge retrieval evaluation
+## Where results go
 
-```bash
-tau2 run --domain banking_knowledge --retrieval-config bm25 \
-  --agent-llm gpt-4.1 --user-llm gpt-4.1 --num-tasks 5
-```
-
-See the [Knowledge Retrieval Documentation](../src/tau2/knowledge/README.md) for retrieval configuration options.
-
-
-> **Tip:** these are custom runs. To run the released 2.0 benchmarks, see
-> [Running the benchmark](running-the-benchmark.md).
-
-## Simulation Output Structure
-
-A released benchmark run writes one directory per language × domain cell under
-its root; see [where results are saved](running-the-benchmark.md#where-results-are-saved).
-Inside each cell, and for a custom run, results are stored in one of two
-formats, chosen automatically based on modality:
-
-### Text runs — monolithic JSON
-
-Text-based simulations produce a single file containing all data:
+Each run writes one directory under `data/simulations/`:
 
 ```
 data/simulations/<run_name>/
-└── results.json             # Metadata, tasks, and all simulation data
+├── results.json        # run info, task definitions and every simulation
+└── artifacts/          # only with --verbose-logs
+    └── task_<task_id>/sim_<simulation_id>/
+        ├── task.log
+        ├── sim_status.json
+        └── llm_debug/  # LLM request/response logs
 ```
 
-### Voice runs — directory-based format
+`<run_name>` is `--save-to` if given, otherwise
+`<timestamp>_airline_<agent>_<agent-model>_<user>_<user-model>`.
+`results.json` is rewritten after every finished simulation, so an
+interrupted run can be continued by rerunning the same command with the
+same `--save-to` (add `--auto-resume` to skip the prompt).
+`tau2 convert-results` switches a results file between this single-file
+`json` format and a `dir` format with one file per simulation.
 
-Voice simulations contain large tick-level data, so they use a directory-based format that splits simulation data into individual files for efficient checkpointing and streaming:
-
-```
-data/simulations/<run_name>/
-├── results.json                        # Metadata and task definitions only
-├── simulations/                        # Individual simulation data files
-│   ├── sim_0.json
-│   ├── sim_1.json
-│   └── ...
-└── artifacts/                          # Runtime artifacts (with --verbose-logs)
-    └── task_<task_id>/
-        └── sim_<uuid>/
-            ├── sim_status.json         # Simulation status
-            ├── task.log                # Per-task log
-            ├── audio/
-            │   ├── both.wav            # Full conversation audio (stereo)
-            │   ├── assistant_labels.txt # Audacity labels for agent speech
-            │   ├── user_labels.txt     # Audacity labels for user speech
-            │   ├── assistant_tool_calls_labels.txt  # Audacity labels for agent tool calls (when present)
-            │   └── user_tool_calls_labels.txt       # Audacity labels for user tool calls (when present)
-            └── llm_debug/
-                └── *.json              # LLM call logs
-```
-
-### Format conversion
-
-You can convert between formats using `tau2 convert-results`:
+## Viewing results
 
 ```bash
-# Convert a monolithic JSON to directory format
-tau2 convert-results data/simulations/my_run --to dir
-
-# Convert a directory format back to monolithic JSON
-tau2 convert-results data/simulations/my_run --to json
+uv run tau2 view
 ```
 
-Both formats are fully supported by `Results.load()`, which auto-detects the format on disk.
+Browse runs in `data/simulations/`, see metrics (average reward, pass^k,
+cost), and inspect each conversation, its reward breakdown and its task.
+`tau2 view --file data/simulations/<run_name>` opens one run directly.
 
-## Viewing Results
+## Configuration defaults
 
-```bash
-tau2 view
-```
+Defaults live in [`src/tau2/config.py`](../src/tau2/config.py); most can be
+overridden on the command line.
 
-This allows you to browse simulation files, view agent performance metrics, inspect individual simulations, and view task details. Works for both standard text and audio native runs.
+| Setting | Default | CLI flag |
+|---------|---------|----------|
+| Agent implementation | `llm_agent` | `--agent` |
+| Agent model and args | `openai/gpt-6.1-sol`, `{"reasoning_effort": "medium"}` | `--agent-llm`, `--agent-llm-args` |
+| User simulator model and args | `openai/gpt-6.1-sol`, `{"reasoning_effort": "low"}` | `--user-llm`, `--user-llm-args` |
+| Communicate-info judge | `openai/gpt-6-luna`, `{"reasoning_effort": "medium"}` | `--communicate-scorer`, `--communicate-judge` |
+| NL-assertion judge (diagnostic) | `openai/gpt-6-luna`, `{"reasoning_effort": "medium"}` | none |
+| Conversation review model | `openai/gpt-6-luna`, `{"reasoning_effort": "medium"}` | `--review-model` |
+| Max steps / max tool errors | `200` / `10` | `--max-steps`, `--max-errors` |
+| Trials / concurrency / seed | `1` / `3` / `300` | `--num-trials`, `--max-concurrency`, `--seed` |
+| Retries per failed simulation | `3`, 1 s apart | `--max-retries`, `--retry-delay` |
+| Log level | `ERROR` | `--log-level` |
 
-## Configuration
+LLM call caching (`LLM_CACHE_ENABLED`, Redis) and Langfuse tracing
+(`USE_LANGFUSE`) are off by default. To use them, install `redis` or
+`langfuse` (`uv pip install redis langfuse`) and switch the flag in
+`config.py`.
 
-The framework is configured via [`src/tau2/config.py`](../src/tau2/config.py).
+## Other tools
 
-### LLM Call Caching
+- `uv run tau2 domain airline` prints the agent policy and the airline tools.
+- `make env-cli` opens an interactive prompt where an LLM answers questions
+  by calling the airline tools directly, without a simulation
+  (`:q` quits, `:d` changes domain, `:n` starts a new session).
+- `make test` runs the test suite; `make check-all` runs ruff lint and
+  format.
+- `make clean` removes the virtual environment and build caches.
 
-LLM call caching is disabled by default. To enable it:
+## Next steps
 
-1. Install the `redis` Python package: `uv pip install redis`
-2. Make sure a Redis server is running
-3. Update the redis config in `config.py` if necessary
-4. Set `LLM_CACHE_ENABLED` to `True` in `config.py`
-
-## Other ways to run
-
-### Environment CLI (beta)
-
-An interactive CLI for querying a domain's environment and tools directly,
-without starting a full simulation:
-
-```bash
-make env-cli
-```
-
-Commands: `:q` quits, `:d` changes domain, `:n` starts a new session.
-
-### Telecom ablations
-
-The `telecom` domain supports research ablations:
-
-```bash
-# No user: the agent gets all tools and information up front.
-tau2 run --domain telecom --agent llm_agent_solo --agent-llm gpt-4.1 --user dummy_user
-
-# Oracle plan: the agent gets the ground-truth plan.
-tau2 run --domain telecom --agent llm_agent_gt --agent-llm gpt-4.1 --user-llm gpt-4.1
-
-# Workflow-format policy.
-tau2 run --domain telecom-workflow --agent-llm gpt-4.1 --user-llm gpt-4.1
-```
-
-## Cleanup
-
-To remove all generated files and the virtual environment:
-
-```bash
-make clean
-```
-
-## Next Steps
-
-- [Running the benchmark](running-the-benchmark.md) — the released text and voice benchmarks
-- [Submission guide](leaderboard-submission.md) — submitting results to the leaderboard
-- [Glossary](glossary.md) — terms used across the docs
-- [CLI Reference](cli-reference.md) — all `tau2` commands and options
-- [Agent Developer Guide](../src/tau2/agent/README.md) — build and evaluate your own agent
-- [Domain Documentation](../src/tau2/domains/README.md) — understand the available domains
-- [τ-Entity](elicitation.md) — the `intake` benchmark and its scaffolded strategy ablation
-- [Communication Modes](../src/tau2/orchestrator/README.md) — half-duplex and full-duplex orchestration
-- [Task Schema & Evaluation](evaluation.md) — how a task is scored, what `actions`/`communicate_info`/`reward_basis` actually do
-- [Knowledge Retrieval](../src/tau2/knowledge/README.md) — retrieval pipeline setup and configuration for banking_knowledge domain
-- [Voice (Full-Duplex)](../src/tau2/voice/README.md) — providers, speech complexity, and CLI options for voice evaluation
-- [Voice Persona Setup](voice-personas.md) — create custom ElevenLabs voices for the user simulator
-- [Gym/RL Interface](../src/tau2/gym/README.md) — Gymnasium-compatible environment for RL training
+- [Running simulations](running_simulations.md): the Python API
+- [CLI reference](cli-reference.md): every `tau2` command and option
+- [Task schema and evaluation](evaluation.md): how a simulation is scored
+- [Agent developer guide](../src/tau2/agent/README.md): build and evaluate your own agent
+- [Domains](../src/tau2/domains/README.md): the airline domain and how to add one

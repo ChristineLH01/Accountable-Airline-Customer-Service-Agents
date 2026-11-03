@@ -1,71 +1,73 @@
 #!/usr/bin/env python3
+"""Show a domain's agent policy and tool reference in the terminal."""
+
 import argparse
-import threading
-import time
-import webbrowser
+import sys
 
-from loguru import logger
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.table import Table
 
-from tau2.environment.server import EnvironmentServer
 from tau2.registry import registry
 
-HOST = "127.0.0.1"
-PORT = 8004
+
+def _params_text(schema: dict) -> str:
+    """One line per parameter: name (type, required): description."""
+    parameters = schema.get("function", {}).get("parameters", {})
+    required = set(parameters.get("required", []))
+    lines = []
+    for name, spec in parameters.get("properties", {}).items():
+        kind = spec.get("type") or ", ".join(
+            option.get("type", "object") for option in spec.get("anyOf", [])
+        )
+        flag = "required" if name in required else "optional"
+        description = spec.get("description", "")
+        lines.append(f"{name} ({kind or 'object'}, {flag}): {description}".rstrip(": "))
+    return "\n".join(lines) or "-"
 
 
-def open_browser(host: str = HOST, port: int = PORT, delay: float = 1.5):
-    """
-    Open the browser to the /redoc endpoint after a short delay.
-
-    Args:
-        host: Server host address
-        port: Server port
-        delay: Delay in seconds before opening browser
-    """
-
-    def _open():
-        time.sleep(delay)  # Give the server time to start
-        url = f"http://{host}:{port}/redoc"
-        logger.info(f"Opening documentation in browser: {url}")
-        webbrowser.open(url)
-
-    thread = threading.Thread(target=_open)
-    thread.daemon = True
-    thread.start()
-
-
-def main(domain: str):
+def main(domain: str, show_policy: bool = True):
     """
     Show documentation for a specific domain.
 
     Args:
         domain: Name of the domain to show documentation for
+        show_policy: Whether to print the agent policy before the tools
     """
-    try:
-        # Get the environment constructor from registry
-        logger.info(f"Setting up environment server for domain: {domain}")
-        env_constructor = registry.get_env_constructor(domain)
-
-        # Create the environment
-        environment = env_constructor()
-        logger.info(f"Created environment for domain: {domain}")
-
-        # Create and start the server
-        server = EnvironmentServer(environment)
-
-        open_browser()
-
-        server.run(host=HOST, port=PORT)
-
-    except KeyError:
-        available_domains = registry.get_domains()
-        logger.error(
-            f"Domain '{domain}' not found. Available domains: {available_domains}"
+    console = Console()
+    if domain not in registry.get_domains():
+        console.print(
+            f"[red]Domain '{domain}' not found. Available domains: "
+            f"{registry.get_domains()}[/red]"
         )
-        exit(1)
-    except Exception as e:
-        logger.error(f"Failed to start domain documentation server: {str(e)}")
-        exit(1)
+        sys.exit(1)
+
+    environment = registry.get_env_constructor(domain)()
+    if show_policy:
+        console.print(
+            Panel(Markdown(environment.get_policy()), title=f"{domain} agent policy")
+        )
+
+    toolkits = [("Agent tools", environment.tools)]
+    if environment.user_tools is not None:
+        toolkits.append(("User tools", environment.user_tools))
+    for title, toolkit in toolkits:
+        if toolkit is None:
+            continue
+        table = Table(title=title, show_lines=True)
+        table.add_column("Tool", style="bold green", no_wrap=True)
+        table.add_column("Type", no_wrap=True)
+        table.add_column("Description")
+        table.add_column("Parameters")
+        for name, tool in sorted(toolkit.get_tools().items()):
+            table.add_row(
+                name,
+                toolkit.tool_type(name).value,
+                tool.short_desc or "",
+                _params_text(tool.openai_schema),
+            )
+        console.print(table)
 
 
 if __name__ == "__main__":
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "domain",
         type=str,
-        help="Name of the domain to show documentation for (e.g., 'airline', 'mock')",
+        help="Name of the domain to show documentation for (e.g., 'airline')",
     )
     args = parser.parse_args()
     main(domain=args.domain)

@@ -1,72 +1,84 @@
 # AGENTS.md — src/tau2/agent/
 
-> See `README.md` for the full developer guide with code examples.
-> See `base/README.md` for protocol classes, streaming, and voice mixins.
+> See `README.md` for the developer guide with code examples.
+> See `base/README.md` for the protocol class and `LLMConfigMixin`.
 
 ## Rules for Working in This Directory
 
-### Choose the Right Base Class
+### One Base Class
 
-| Communication mode | Base class | Key method |
-|-------------------|-----------|------------|
-| Half-duplex (turn-based text) | `HalfDuplexAgent` | `generate_next_message()` |
-| Full-duplex (streaming/voice) | `FullDuplexAgent` | `get_next_chunk()` |
+All agents are turn-based (half-duplex) and subclass `HalfDuplexAgent`
+(`base_agent.py`), implementing `get_init_state()` and
+`generate_next_message()`.
 
 ### Constructor Contract
 
-Both base classes MUST accept: `__init__(self, tools: list[Tool], domain_policy: str)`.
-For LLM-powered agents, add `LLMConfigMixin` which provides `llm: str` and `llm_args: dict`.
+Agents MUST accept `__init__(self, tools: list[Tool], domain_policy: str)`.
+For LLM-powered agents, add `LLMConfigMixin`, which provides `llm: str` and
+`llm_args: dict`.
 
-### MRO (Mixin Inheritance Order) Is Critical
+### Inheritance Order
 
-Python MRO determines which `__init__` runs. Follow this exact order:
+Put mixins before the protocol base class:
 
 ```python
-class MyAgent(
-    LLMConfigMixin,           # 1. Config mixins first
-    VoiceMixin,               # 2. Capability mixins second
-    AudioChunkingMixin,       # 2. (continued)
-    FullDuplexAgent[StateType] # 3. Protocol base class last
-):
+class MyAgent(LLMConfigMixin, HalfDuplexAgent[MyAgentState]):
+    ...
 ```
 
-Getting this wrong causes subtle bugs where `__init__` arguments silently disappear.
+`LLMConfigMixin.__init__` consumes `llm` and `llm_args` and forwards the rest
+via `super()`. Reversing the order makes those arguments disappear silently.
 
 ### Message Constraints
 
-- A message MUST have either `content` (text) OR `tool_calls`, NEVER both simultaneously.
-- `AssistantMessage.is_tool_call()` returns `True` when `tool_calls` is non-empty.
-- Tool calls are atomic — never chunk them in streaming agents.
+- A message MUST have either `content` (text) OR `tool_calls`, NEVER both and
+  never neither. An empty message always raises in `message.validate()`; a
+  message with both is ended as `AGENT_ERROR`/`USER_ERROR` only when
+  `enforce_communication_protocol` is set.
+- `AssistantMessage.is_tool_call()` returns `True` when `tool_calls` is not
+  `None`; use `None`, not `[]`, for a text-only message.
+- A `MultiToolMessage` input wraps several tool results; unpack
+  `message.tool_messages` into the history.
 
 ### State Classes
 
-- Use Pydantic `BaseModel` for all state classes.
-- For full-duplex agents, extend `StreamingState` (from `base/streaming.py`).
-- State composition uses multiple inheritance: `class MyState(BaseState, StreamingState, VoiceState)`.
+Use Pydantic `BaseModel` for state classes (see `LLMAgentState` in
+`llm_agent.py`).
+
+### Prompts Are Pinned
+
+`LLMAgent`'s system prompt (`AGENT_INSTRUCTION` and `SYSTEM_PROMPT` in
+`llm_agent.py`), the policy file and `AGENT_LANGUAGE_CLAUSE` in
+`tau2/runner/build.py` together reproduce the τ-bench 2.0 English agent
+prompt. `tests/test_domains/test_airline/test_prompts_airline.py` pins them
+with a digest; changing any of them changes results comparability, so update
+the digest only deliberately.
 
 ### Registration
 
-Every agent needs a factory function and registry entry:
+Every agent needs a factory function and a registry entry:
 
 ```python
-# Factory signature:
-def create_agent(tools, domain_policy, **kwargs):
-    # kwargs may include: llm, llm_args, task, audio_native_config, etc.
+# Factory signature (kwargs: llm, llm_args, task):
+def create_my_agent(tools, domain_policy, **kwargs):
     return MyAgent(tools=tools, domain_policy=domain_policy, ...)
 
 # In src/tau2/registry.py:
 registry.register_agent_factory(create_my_agent, "my_agent")
 ```
 
-The name passed to `register_agent_factory` is what users pass via `--agent` on the CLI.
+The registered name is what users pass to `--agent`. Pass
+`task_filter=` if the agent can only run some tasks (as `llm_agent_gt` does
+with `LLMGTAgent.check_valid_task`).
 
 ### Stop Signals
 
-- Half-duplex: `is_stop()` classmethod checks for stop conditions.
-- Full-duplex (`DiscreteTimeAudioNativeAgent`): detects `transfer_to_human_agents` tool calls (appends `###STOP###` to message content), then `is_stop()` checks for `###STOP###` in `message.content`.
+`is_stop()` defaults to `False` for agents; `LLMAgent` does not override it.
+Conversations end when the user simulator emits `###STOP###`,
+`###TRANSFER###` or `###OUT-OF-SCOPE###`, or when the orchestrator hits
+`max_steps`, `max_errors` or `timeout`.
 
 ### Testing
 
 - Unit tests: `tests/test_agent.py`
-- Streaming agent tests: `tests/test_streaming/`
-- Audio native agent tests: `tests/test_streaming/test_discrete_time_audio_native_agent.py`
+- Orchestration with agents: `tests/test_orchestrator.py`

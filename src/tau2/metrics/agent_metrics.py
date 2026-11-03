@@ -51,10 +51,6 @@ class AgentMetrics(BaseModel):
     termination_error: int = 0
     termination_infrastructure_error: int = 0
 
-    # Responsiveness metrics (from full-duplex/streaming mode)
-    sims_with_unresponsive_period: int = 0
-    sims_with_responsiveness_info: int = 0
-
     # Review error metrics (from LLM judge)
     agent_errors_by_severity: dict[str, int] = {}  # severity -> count
     user_errors_by_severity: dict[str, int] = {}  # severity -> count
@@ -271,10 +267,6 @@ def compute_metrics(results: Results) -> AgentMetrics:
     termination_max_steps = 0
     termination_error = 0
 
-    # Responsiveness (from full-duplex/streaming mode)
-    sims_with_unresponsive_period = 0
-    sims_with_responsiveness_info = 0
-
     # Review errors
     agent_errors_by_severity: dict[str, int] = defaultdict(int)
     user_errors_by_severity: dict[str, int] = defaultdict(int)
@@ -334,12 +326,6 @@ def compute_metrics(results: Results) -> AgentMetrics:
         ):
             termination_error += 1
 
-        # Responsiveness info (from full-duplex/streaming mode)
-        if sim.info and "had_unresponsive_period" in sim.info:
-            sims_with_responsiveness_info += 1
-            if sim.info["had_unresponsive_period"]:
-                sims_with_unresponsive_period += 1
-
         # Review errors
         if sim.review is not None:
             agent_errors = [e for e in sim.review.errors if e.source == "agent"]
@@ -386,9 +372,7 @@ def compute_metrics(results: Results) -> AgentMetrics:
 
             # Find first critical error source
             def get_error_position(e):
-                """Get position for sorting: tick_start for full-duplex, turn_idx for turn-based."""
-                if e.tick_start is not None:
-                    return e.tick_start
+                """Get position for sorting: the error's turn index."""
                 if e.turn_idx is not None:
                     return e.turn_idx
                 return float("inf")
@@ -466,8 +450,6 @@ def compute_metrics(results: Results) -> AgentMetrics:
         termination_max_steps=termination_max_steps,
         termination_error=termination_error,
         termination_infrastructure_error=infra_error_count,
-        sims_with_unresponsive_period=sims_with_unresponsive_period,
-        sims_with_responsiveness_info=sims_with_responsiveness_info,
         agent_errors_by_severity=dict(agent_errors_by_severity),
         user_errors_by_severity=dict(user_errors_by_severity),
         sims_by_max_agent_severity=dict(sims_by_max_agent_severity),

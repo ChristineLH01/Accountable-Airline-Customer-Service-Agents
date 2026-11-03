@@ -4,7 +4,6 @@ from typing import Optional
 
 from tau2.data_model.tasks import Task
 from tau2.domains.airline.data_model import FlightDB
-from tau2.domains.airline.region import AirlineRegionalSettings
 from tau2.domains.airline.tools import AirlineTools
 from tau2.domains.airline.utils import (
     AIRLINE_DB_PATH,
@@ -17,17 +16,13 @@ from tau2.utils import load_file
 
 def get_environment(
     db: Optional[FlightDB] = None,
-    solo_mode: bool = False,
     policy: str | None = None,
-    regional_settings: AirlineRegionalSettings | None = None,
 ) -> Environment:
-    if solo_mode:
-        raise ValueError("Airline domain does not support solo mode")
     if db is None:
         db = FlightDB.load(AIRLINE_DB_PATH)
     else:
         db = db.model_copy(deep=True)
-    tools = AirlineTools(db, regional_settings=regional_settings)
+    tools = AirlineTools(db)
     if policy is None:
         with open(AIRLINE_POLICY_PATH, "r") as fp:
             policy = fp.read()

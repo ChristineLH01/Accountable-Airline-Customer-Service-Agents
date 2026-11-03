@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import subprocess
 import uuid
 from collections import defaultdict
 from datetime import datetime
@@ -22,14 +21,7 @@ from tau2.data_model.simulation import (
 from tau2.data_model.tasks import Task, TaskIssue, TaskIssueStatus
 from tau2.metrics.agent_metrics import compute_metrics, is_successful
 from tau2.utils.display import ConsoleDisplay
-from tau2.utils.utils import DATA_DIR
-
-
-def get_tick_duration_ms(results: Results) -> Optional[int]:
-    """Extract tick_duration_ms from Results.info.audio_native_config."""
-    if results.info.audio_native_config is not None:
-        return int(results.info.audio_native_config.tick_duration_ms)
-    return None
+from tau2.utils.utils import DATA_DIR, domain_data_dir
 
 
 def get_available_simulations(sim_dir: Optional[Path] = None):
@@ -48,9 +40,6 @@ def get_available_simulations(sim_dir: Optional[Path] = None):
     sim_files = []
     for subdir in sim_dir.iterdir():
         if subdir.is_dir():
-            if (subdir / "benchmark-frame.json").is_file():
-                sim_files.append(subdir)
-                continue
             reviewed_file = subdir / "results_reviewed.json"
             results_file = subdir / "results.json"
             if reviewed_file.exists():
@@ -108,7 +97,6 @@ def display_simulation_list(
     table.add_column("Write Acts", width=10, justify="center")
     table.add_column("Auth", width=4, justify="center")
     table.add_column("Stop", width=4, justify="center")
-    table.add_column("🔇", width=2, justify="center")  # Unresponsive period
     table.add_column("🤖 Err", width=6, justify="center")  # Agent errors
     table.add_column("👤 Err", width=6, justify="center")  # User errors
     table.add_column("🤖 Tags", no_wrap=False)  # Agent error tags
@@ -199,14 +187,6 @@ def display_simulation_list(
         term_color = termination_color_map.get(sim.termination_reason, "white")
         term_icon = termination_icon_map.get(sim.termination_reason, "?")
         stop_str = f"[{term_color}]{term_icon}[/]"
-
-        # Unresponsive period (from streaming/full-duplex mode)
-        if sim.info and "had_unresponsive_period" in sim.info:
-            unresponsive_str = (
-                "[red]✗[/]" if sim.info["had_unresponsive_period"] else "[green]✓[/]"
-            )
-        else:
-            unresponsive_str = "[dim]-[/]"
 
         # Tag abbreviations
         tag_abbrev = {
@@ -326,7 +306,6 @@ def display_simulation_list(
             write_str,
             auth_str,
             stop_str,
-            unresponsive_str,
             agent_err_str,
             user_err_str,
             agent_tags_str,
@@ -351,86 +330,6 @@ def display_available_files(files):
         ConsoleDisplay.console.print(f"[cyan]{i}.[/] {dir_name}")
 
 
-def view_benchmark(
-    root: Path,
-    *,
-    only_show_failed: bool = False,
-    only_show_all_failed: bool = False,
-    expanded_ticks: bool = False,
-    max_tool_result_length: Optional[int] = 500,
-) -> None:
-    """Display official coverage, then drill into an ordinary cell's saved calls."""
-    from tau2.metrics.benchmark import load_saved_benchmark
-
-    while True:
-        matrix = load_saved_benchmark(root)
-        summary = matrix.submission.summary
-        score = f"{summary.score:.1%}" if summary.complete else "incomplete"
-        ConsoleDisplay.console.print(
-            f"\n[bold]{summary.benchmark_version}[/] — {summary.frame_revision}"
-        )
-        ConsoleDisplay.console.print(f"Official pass@1: {score}")
-        ConsoleDisplay.console.print(
-            f"{summary.scored_trials}/{summary.expected_trials} scored; "
-            f"{summary.missing_trials} missing; {summary.error_trials} errors; "
-            f"{summary.unscored_trials} unscored"
-        )
-        requested = matrix.submission.requested
-        if requested is not None:
-            requested_score = (
-                f"{requested.score:.1%}" if requested.complete else "incomplete"
-            )
-            ConsoleDisplay.console.print(
-                f"Requested selection pass@1: {requested_score}; "
-                f"{requested.scored_trials}/{requested.expected_trials} scored"
-            )
-        table = Table(title="Released language/domain cells")
-        for column in (
-            "#",
-            "Language",
-            "Domain",
-            "Scored",
-            "Missing",
-            "Errors",
-            "Unscored",
-            "Pass@1",
-        ):
-            table.add_column(column)
-        paths = []
-        for saved, cell in zip(matrix.cells, summary.cells, strict=True):
-            number = "—"
-            if saved.results_path is not None:
-                paths.append(saved.results_path)
-                number = str(len(paths))
-            table.add_row(
-                number,
-                cell.language,
-                cell.domain,
-                f"{cell.scored_trials}/{cell.expected_trials}",
-                str(cell.missing_trials),
-                str(cell.error_trials),
-                str(cell.unscored_trials),
-                f"{cell.score:.1%}" if cell.complete else "incomplete",
-            )
-        ConsoleDisplay.console.print(table)
-        if not paths:
-            return
-        choice = IntPrompt.ask(
-            "Select a cell to view its calls (0 to exit)",
-            choices=[str(i) for i in range(len(paths) + 1)],
-            default=0,
-        )
-        if choice == 0:
-            return
-        main(
-            sim_file=str(paths[choice - 1]),
-            only_show_failed=only_show_failed,
-            only_show_all_failed=only_show_all_failed,
-            expanded_ticks=expanded_ticks,
-            max_tool_result_length=max_tool_result_length,
-        )
-
-
 def display_simulation_with_task(
     simulation: SimulationRun,
     task: Task,
@@ -438,8 +337,6 @@ def display_simulation_with_task(
     sim_index: int,
     domain: str,
     show_details: bool = True,
-    consolidated_ticks: bool = True,
-    tick_duration_ms: Optional[int] = None,
 ):
     """Display a simulation along with its associated task."""
     ConsoleDisplay.console.print("\n" + "=" * 80)  # Separator
@@ -448,12 +345,7 @@ def display_simulation_with_task(
 
     ConsoleDisplay.console.print("\n" + "=" * 80)  # Separator
     ConsoleDisplay.console.print("[bold blue]Simulation Details:[/]")
-    ConsoleDisplay.display_simulation(
-        simulation,
-        show_details=show_details,
-        consolidated_ticks=consolidated_ticks,
-        tick_duration_ms=tick_duration_ms,
-    )
+    ConsoleDisplay.display_simulation(simulation, show_details=show_details)
 
     # Show action menu (skip, add notes, or create task issue)
     handle_post_simulation_action(simulation, task, domain, results_file, sim_index)
@@ -597,7 +489,7 @@ def prompt_for_simulation_note(
     # Error type (optional)
     error_type_choices = [e.value for e in ErrorType] + [""]
     ConsoleDisplay.console.print(
-        "\n[dim]Error type options: transcription, vad, logical, hallucination, unresponsive, early_termination[/]"
+        "\n[dim]Error type options: logical, hallucination, unresponsive, early_termination[/]"
     )
     error_type_str = Prompt.ask(
         "[bold]Error type[/]",
@@ -660,7 +552,7 @@ def save_simulation_note(
     warnings.warn(
         "save_simulation_note() creates large *_simulation.json files that should not "
         "be committed to git. Use 'export_html.py --results' instead, which reads "
-        "results.json directly. See src/experiments/tau_voice/annotation/README.md.",
+        "results.json directly.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -774,8 +666,8 @@ def save_task_issue(
     1. Optionally save the simulation run to the task_issues directory
     2. Update the tasks.json file with the new issue
     """
-    domain_data_dir = Path(DATA_DIR) / "tau2" / "domains" / domain
-    tasks_file = domain_data_dir / "tasks.json"
+    data_dir = domain_data_dir(domain)
+    tasks_file = data_dir / "tasks.json"
 
     if not tasks_file.exists():
         ConsoleDisplay.console.print(f"[red]Tasks file not found: {tasks_file}[/]")
@@ -783,7 +675,7 @@ def save_task_issue(
 
     # Save simulation if provided
     if simulation is not None:
-        task_issues_dir = domain_data_dir / "task_issues"
+        task_issues_dir = data_dir / "task_issues"
         task_issues_dir.mkdir(exist_ok=True)
 
         # Create filename based on task and issue
@@ -908,31 +800,20 @@ def main(
     only_show_failed: bool = False,
     only_show_all_failed: bool = False,
     sim_dir: Optional[str] = None,
-    expanded_ticks: bool = False,
     max_tool_result_length: Optional[int] = 500,
 ):
     ConsoleDisplay.max_tool_result_length = max_tool_result_length
-
-    requested_path = Path(sim_file or sim_dir) if sim_file or sim_dir else None
-    if (
-        requested_path is not None
-        and (requested_path / "benchmark-frame.json").is_file()
-    ):
-        view_benchmark(
-            requested_path,
-            only_show_failed=only_show_failed,
-            only_show_all_failed=only_show_all_failed,
-            expanded_ticks=expanded_ticks,
-            max_tool_result_length=max_tool_result_length,
-        )
-        return
 
     # Get available simulation files
     if sim_file is None:
         custom_sim_dir = Path(sim_dir) if sim_dir else None
         sim_files = get_available_simulations(custom_sim_dir)
     else:
-        sim_files = [Path(sim_file)]
+        sim_file_path = Path(sim_file)
+        # An ordinary run directory holds its results.json
+        if sim_file_path.is_dir():
+            sim_file_path = sim_file_path / "results.json"
+        sim_files = [sim_file_path]
 
     if not sim_files:
         dir_path = sim_dir if sim_dir else f"{DATA_DIR}/simulations"
@@ -966,51 +847,9 @@ def main(
                 "   [dim]Display the configuration used for this simulation run[/]"
             )
 
-            has_voice = False
-            voice_sim_path = None
-            audio_file = None
-            if current_sim_path:
-                # Check for half-duplex voice (voice/sim_*/conversation.wav)
-                voice_dirs = list((current_sim_path / "voice").glob("sim_*"))
-                if voice_dirs:
-                    voice_sim_path = voice_dirs[0]
-                    conversation_audio = voice_sim_path / "conversation.wav"
-                    if conversation_audio.exists():
-                        has_voice = True
-                        audio_file = conversation_audio
-
-                # Check for full-duplex audio (audio/both.wav or artifacts/*/sim_*/audio/both.wav)
-                if not has_voice:
-                    # First check top-level audio directory
-                    top_audio = current_sim_path / "audio" / "both.wav"
-                    if top_audio.exists():
-                        has_voice = True
-                        audio_file = top_audio
-                        voice_sim_path = current_sim_path / "audio"
-                    else:
-                        # Check task-specific audio directories
-                        task_audio_dirs = list(
-                            current_sim_path.glob("artifacts/*/sim_*/audio")
-                        )
-                        if task_audio_dirs:
-                            voice_sim_path = task_audio_dirs[0]
-                            both_audio = voice_sim_path / "both.wav"
-                            if both_audio.exists():
-                                has_voice = True
-                                audio_file = both_audio
-
-            if has_voice:
-                ConsoleDisplay.console.print("6. Listen to voice conversation")
-                ConsoleDisplay.console.print(
-                    "   [dim]View simulation and play audio simultaneously[/]"
-                )
-                ConsoleDisplay.console.print("7. Exit")
-                ConsoleDisplay.console.print("   [dim]Close the simulation viewer[/]")
-                choices = ["1", "2", "3", "4", "5", "6", "7"]
-            else:
-                ConsoleDisplay.console.print("6. Exit")
-                ConsoleDisplay.console.print("   [dim]Close the simulation viewer[/]")
-                choices = ["1", "2", "3", "4", "5", "6"]
+            ConsoleDisplay.console.print("6. Exit")
+            ConsoleDisplay.console.print("   [dim]Close the simulation viewer[/]")
+            choices = ["1", "2", "3", "4", "5", "6"]
             default_choice = "3"
         else:
             ConsoleDisplay.console.print("2. Exit")
@@ -1032,16 +871,6 @@ def main(
 
             if 1 <= file_num <= len(sim_files):
                 try:
-                    selected_file = sim_files[file_num - 1]
-                    if (selected_file / "benchmark-frame.json").is_file():
-                        view_benchmark(
-                            selected_file,
-                            only_show_failed=only_show_failed,
-                            only_show_all_failed=only_show_all_failed,
-                            expanded_ticks=expanded_ticks,
-                            max_tool_result_length=max_tool_result_length,
-                        )
-                        continue
                     current_results_file = str(sim_files[file_num - 1])
                     current_sim_path = sim_files[file_num - 1].parent
                     current_file = current_sim_path.name
@@ -1090,7 +919,6 @@ def main(
                 sim = results.simulations[sim_index - 1]
                 task = find_task_by_id(results.tasks, sim.task_id)
                 domain = results.info.environment_info.domain_name
-                tick_duration = get_tick_duration_ms(results)
                 if task:
                     display_simulation_with_task(
                         sim,
@@ -1099,19 +927,12 @@ def main(
                         sim_index,
                         domain=domain,
                         show_details=True,
-                        consolidated_ticks=not expanded_ticks,
-                        tick_duration_ms=tick_duration,
                     )
                 else:
                     ConsoleDisplay.console.print(
                         f"[red]Warning: Could not find task for simulation {sim.id}[/]"
                     )
-                    ConsoleDisplay.display_simulation(
-                        sim,
-                        show_details=True,
-                        consolidated_ticks=not expanded_ticks,
-                        tick_duration_ms=tick_duration,
-                    )
+                    ConsoleDisplay.display_simulation(sim, show_details=True)
                 continue
             else:
                 ConsoleDisplay.console.print("[red]Invalid simulation number[/]")
@@ -1143,86 +964,6 @@ def main(
             # Display run configuration
             ConsoleDisplay.console.clear()
             ConsoleDisplay.display_info(results.info)
-            continue
-
-        elif results and choice == "6" and has_voice:
-            # Listen to voice conversation - select simulation first
-            display_simulation_list(results, only_show_failed, only_show_all_failed)
-
-            sim_count = len(results.simulations)
-            sim_index = IntPrompt.ask(
-                f"\nSelect simulation to listen to (1-{sim_count})", default=1
-            )
-
-            if 1 <= sim_index <= sim_count:
-                sim = results.simulations[sim_index - 1]
-                task = find_task_by_id(results.tasks, sim.task_id)
-
-                # Find audio file for this specific simulation
-                sim_audio_file = None
-                # Check task-specific audio first
-                task_audio_path = (
-                    current_sim_path
-                    / "artifacts"
-                    / f"task_{sim.task_id}"
-                    / f"sim_{sim.id}"
-                    / "audio"
-                    / "both.wav"
-                )
-                if task_audio_path.exists():
-                    sim_audio_file = task_audio_path
-                elif audio_file:
-                    # Fall back to top-level audio
-                    sim_audio_file = audio_file
-
-                if sim_audio_file and sim_audio_file.exists():
-                    # Display simulation content
-                    ConsoleDisplay.console.clear()
-                    if task:
-                        ConsoleDisplay.console.print("\n" + "=" * 80)
-                        ConsoleDisplay.console.print("[bold blue]Task Details:[/]")
-                        ConsoleDisplay.display_task(task)
-
-                    ConsoleDisplay.console.print("\n" + "=" * 80)
-                    ConsoleDisplay.console.print("[bold blue]Simulation Details:[/]")
-                    ConsoleDisplay.display_simulation(
-                        sim,
-                        show_details=True,
-                        consolidated_ticks=not expanded_ticks,
-                        tick_duration_ms=get_tick_duration_ms(results),
-                    )
-
-                    # Start audio playback
-                    ConsoleDisplay.console.print("\n" + "=" * 80)
-                    ConsoleDisplay.console.print("\n[bold blue]🎧 Playing audio...[/]")
-                    ConsoleDisplay.console.print(
-                        "[dim]Press Ctrl+C to stop playback[/]"
-                    )
-                    ConsoleDisplay.console.print(
-                        f"[dim]Audio file: {sim_audio_file}[/]"
-                    )
-
-                    process = subprocess.Popen(["afplay", str(sim_audio_file)])
-
-                    try:
-                        process.wait()
-                        ConsoleDisplay.console.print(
-                            "[green]✓ Finished playing audio[/]"
-                        )
-                    except KeyboardInterrupt:
-                        process.terminate()
-                        process.wait()
-                        ConsoleDisplay.console.print(
-                            "\n[yellow]Audio playback stopped[/]"
-                        )
-
-                    Prompt.ask("\n[dim]Press Enter to continue[/]")
-                else:
-                    ConsoleDisplay.console.print(
-                        f"[red]Audio file not found for simulation {sim.id}[/]"
-                    )
-            else:
-                ConsoleDisplay.console.print("[red]Invalid simulation number[/]")
             continue
 
         else:

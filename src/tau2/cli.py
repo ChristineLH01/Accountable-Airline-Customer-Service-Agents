@@ -3,71 +3,43 @@ import json
 
 from tau2.config import (
     DEFAULT_AGENT_IMPLEMENTATION,
-    DEFAULT_AUDIO_NATIVE_MODELS,
-    DEFAULT_AUDIO_NATIVE_PROVIDER,
-    DEFAULT_CHANNEL_EFFECTS_MODE,
-    DEFAULT_ELICITATION_LLM_ARGS_USER,
-    DEFAULT_ELICITATION_LLM_USER,
-    DEFAULT_ELICITATION_MAX_STEPS_SECONDS,
-    DEFAULT_INTEGRATION_DURATION_SECONDS,
-    DEFAULT_INTERRUPTION_CHECK_INTERVAL_SECONDS,
-    DEFAULT_LANGUAGE,
     DEFAULT_LLM_AGENT,
-    DEFAULT_LLM_EVAL_USER_SIMULATOR,
+    DEFAULT_LLM_ARGS_AGENT,
+    DEFAULT_LLM_ARGS_USER,
     DEFAULT_LLM_LOG_MODE,
-    DEFAULT_LLM_TEMPERATURE_AGENT,
-    DEFAULT_LLM_TEMPERATURE_USER,
+    DEFAULT_LLM_REVIEW,
     DEFAULT_LLM_USER,
     DEFAULT_LOG_LEVEL,
     DEFAULT_MAX_CONCURRENCY,
     DEFAULT_MAX_ERRORS,
     DEFAULT_MAX_STEPS,
-    DEFAULT_MAX_STEPS_SECONDS,
     DEFAULT_NUM_TRIALS,
-    DEFAULT_PCM_SAMPLE_RATE,
     DEFAULT_RETRY_ATTEMPTS,
     DEFAULT_RETRY_MIN_WAIT,
     DEFAULT_SEED,
-    DEFAULT_SILENCE_ANNOTATION_THRESHOLD_SECONDS,
-    DEFAULT_SPEECH_COMPLEXITY,
-    DEFAULT_SPEECH_EFFECTS_MODE,
-    DEFAULT_TELEPHONY_RATE,
-    DEFAULT_TICK_DURATION_SECONDS,
     DEFAULT_USER_IMPLEMENTATION,
-    DEFAULT_WAIT_TO_RESPOND_THRESHOLD_OTHER_SECONDS,
-    DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS,
-    DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
-    DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS,
+    TEXT_BENCHMARK_LLM_ARGS_USER,
+    TEXT_BENCHMARK_LLM_USER,
 )
-from tau2.data_model.cascaded import CascadedConfigRequest
-from tau2.data_model.persona import PersonaConfig
-from tau2.data_model.run_config import AudioNativeConfig
-from tau2.data_model.simulation import TextRunConfig, VoiceRunConfig
-from tau2.domains.banking_knowledge.retrieval import get_all_variant_names
+from tau2.data_model.semantic_communication import (
+    CommunicateScorer,
+    CommunicateScoring,
+    SemanticCommunicateSettings,
+)
+from tau2.data_model.simulation import RunConfig
 from tau2.run import get_options, run_domain
-from tau2.runner.work import parse_provider_limits
-from tau2.voice.audio_native.avartha_pipecat.config import AvarthaPipecatConfig
-
-
-def get_all_retrieval_config_names():
-    return get_all_variant_names()
 
 
 def add_run_args(parser):
     """Add run arguments to a parser."""
-    from tau2.multilingual.cli import add_language_run_args
-    from tau2.runner.cli import add_benchmark_run_args
-
-    add_language_run_args(parser)
-    add_benchmark_run_args(parser)
-    domains = get_options().domains
+    options = get_options()
     parser.add_argument(
         "--domain",
         "-d",
         type=str,
-        choices=domains,
-        action="append",
-        help="Domain filter; repeatable for released voice runs. Omit to run all released voice domains.",
+        choices=options.domains,
+        default="airline",
+        help="The domain to run the simulation on. Default is airline.",
     )
     parser.add_argument(
         "--num-trials",
@@ -79,25 +51,25 @@ def add_run_args(parser):
         "--agent",
         type=str,
         default=DEFAULT_AGENT_IMPLEMENTATION,
-        choices=get_options().agents,
+        choices=options.agents,
         help=f"The agent implementation to use. Default is {DEFAULT_AGENT_IMPLEMENTATION}.",
     )
     parser.add_argument(
         "--agent-llm",
         type=str,
         default=DEFAULT_LLM_AGENT,
-        help=f"The LLM to use for the agent. Default is {DEFAULT_LLM_AGENT}.",
+        help=f"The OpenRouter model ID of the agent's LLM. Default is {DEFAULT_LLM_AGENT}.",
     )
     parser.add_argument(
         "--agent-llm-args",
         type=json.loads,
-        default={"temperature": DEFAULT_LLM_TEMPERATURE_AGENT},
-        help=f"The arguments to pass to the LLM for the agent. Default is '{{\"temperature\": {DEFAULT_LLM_TEMPERATURE_AGENT}}}'.",
+        default=None,
+        help=f"The arguments to pass to the LLM for the agent, as JSON. Default is '{json.dumps(DEFAULT_LLM_ARGS_AGENT)}'.",
     )
     parser.add_argument(
         "--user",
         type=str,
-        choices=get_options().users,
+        choices=options.users,
         default=DEFAULT_USER_IMPLEMENTATION,
         help=f"The user implementation to use. Default is {DEFAULT_USER_IMPLEMENTATION}.",
     )
@@ -105,38 +77,40 @@ def add_run_args(parser):
         "--user-llm",
         type=str,
         default=None,
-        help=f"The LLM to use for the user. Default is {DEFAULT_LLM_USER}; τ-Entity uses {DEFAULT_ELICITATION_LLM_USER}.",
+        help=f"The OpenRouter model ID of the user simulator's LLM. Default is {DEFAULT_LLM_USER}. "
+        f"The released tau-bench 2.0 text benchmark uses {TEXT_BENCHMARK_LLM_USER}.",
     )
     parser.add_argument(
         "--user-llm-args",
         type=json.loads,
         default=None,
-        help=f"The arguments to pass to the LLM for the user. Default is '{{\"temperature\": {DEFAULT_LLM_TEMPERATURE_USER}}}'; the default τ-Entity caller uses {json.dumps(DEFAULT_ELICITATION_LLM_ARGS_USER)}.",
+        help=f"The arguments to pass to the LLM for the user, as JSON. Default is '{json.dumps(DEFAULT_LLM_ARGS_USER)}'. "
+        f"The released text benchmark uses '{json.dumps(TEXT_BENCHMARK_LLM_ARGS_USER)}'.",
     )
     parser.add_argument(
         "--task-set-name",
         type=str,
         default=None,
-        choices=get_options().task_sets,
+        choices=options.task_sets,
         help="The task set to run the simulation on. If not provided, will load default task set for the domain.",
     )
     parser.add_argument(
         "--task-split-name",
         type=str,
         default="base",
-        help="The task split to run the simulation on. If not provided, will load 'base' split.",
+        help="The task split to run the simulation on (base, train or test). Default is 'base'.",
     )
     parser.add_argument(
         "--task-ids",
         type=str,
         nargs="+",
-        help="Explicit task IDs. Released voice runs accept canonical IDs from exactly one domain; custom/text runs use ordinary task IDs.",
+        help="Run only these task IDs.",
     )
     parser.add_argument(
         "--num-tasks",
         type=int,
         default=None,
-        help="Tasks per domain: released voice runs select from each frozen subset, consistently across languages; custom/text runs use ordinary task selection.",
+        help="Run only the first N selected tasks.",
     )
     parser.add_argument(
         "--max-steps",
@@ -148,7 +122,7 @@ def add_run_args(parser):
         "--max-errors",
         type=int,
         default=DEFAULT_MAX_ERRORS,
-        help=f"The maximum number of tool errors allowed in a row in the simulation. Default is {DEFAULT_MAX_ERRORS}.",
+        help=f"The maximum number of tool errors allowed in a simulation before it is stopped. Default is {DEFAULT_MAX_ERRORS}.",
     )
     parser.add_argument(
         "--timeout",
@@ -161,31 +135,13 @@ def add_run_args(parser):
         "--output",
         type=str,
         required=False,
-        help="The path to save the simulation results. Will be saved to data/simulations/<save_to>/results.json. If not provided, will save to <timestamp>_<domain>_<agent>_<user>. If the file already exists, it will try to resume the run.",
+        help="The path to save the simulation results. Will be saved to data/simulations/<save_to>/results.json. If not provided, will save to <timestamp>_<domain>_<agent>_<agent-llm>_<user>_<user-llm>. If the file already exists, it will try to resume the run.",
     )
     parser.add_argument(
         "--max-concurrency",
         type=int,
         default=DEFAULT_MAX_CONCURRENCY,
-        help=f"The maximum number of concurrent simulations to run. Default is {DEFAULT_MAX_CONCURRENCY}. "
-        "With --workers, this is the number of simulations each worker process holds.",
-    )
-    parser.add_argument(
-        "--workers",
-        type=int,
-        default=None,
-        help="Number of worker processes to spawn. Omitted or 0 runs custom runs in "
-        "this process; released benchmarks default to one worker and override 0 to one. "
-        "N > 0 makes this process a controller that schedules and checkpoints "
-        "while N worker processes execute (N x --max-concurrency simulations in flight); "
-        "use when scaling beyond the single-process concurrency ceiling.",
-    )
-    parser.add_argument(
-        "--provider-limit",
-        type=str,
-        default=None,
-        help='Per-provider concurrency caps in controller mode, e.g. "openai=40,gemini=20". '
-        "Requires --workers.",
+        help=f"The maximum number of concurrent simulations to run. Default is {DEFAULT_MAX_CONCURRENCY}.",
     )
     parser.add_argument(
         "--seed",
@@ -203,23 +159,8 @@ def add_run_args(parser):
         "--verbose-logs",
         action="store_true",
         default=False,
-        help="Enable verbose logging: saves LLM call logs, audio files, per-task logs, and ticks (for audio-native). "
+        help="Enable verbose logging: saves LLM call logs and per-task logs. "
         "Files are saved to the save directory (auto-generated if --save-to not specified).",
-    )
-    parser.add_argument(
-        "--audio-debug",
-        action="store_true",
-        default=False,
-        help="Enable audio debugging for audio-native mode. Saves per-tick audio files and timing "
-        "analysis report for diagnosing alignment issues. Requires --audio-native.",
-    )
-    parser.add_argument(
-        "--audio-taps",
-        action="store_true",
-        default=False,
-        help="Enable audio tap recording for audio-native mode. Saves WAV files at each pipeline "
-        "stage (pre-effects, post-noise, post-telephony, final, agent-input) for diagnosing "
-        "signal property differences. Requires --audio-native.",
     )
     parser.add_argument(
         "--llm-log-mode",
@@ -229,7 +170,7 @@ def add_run_args(parser):
         help="LLM debug logging mode. Only takes effect when --verbose-logs is enabled. "
         "'all' saves every LLM call (can generate many files), "
         "'latest' keeps only the most recent call of each type (saves space). "
-        f"Default is '{DEFAULT_LLM_LOG_MODE}'. Ignored if --verbose-logs is not specified.",
+        f"Default is '{DEFAULT_LLM_LOG_MODE}'.",
     )
     parser.add_argument(
         "--max-retries",
@@ -249,231 +190,21 @@ def add_run_args(parser):
         default=False,
         help="Enforce communication protocol rules (e.g., no mixed messages with text and tool calls). Default is False.",
     )
+
+    # Scoring
     parser.add_argument(
-        "--user-persona",
+        "--communicate-scorer",
+        choices=[scorer.value for scorer in CommunicateScorer],
+        default=None,
+        help="Communicate-info scorer: the pinned semantic LLM judge (default) or "
+        "the original substring matching of tau2-bench 1.x.",
+    )
+    parser.add_argument(
+        "--communicate-judge",
         type=json.loads,
         default=None,
-        help="User persona config as JSON dict. Supports explicit values or weighted probabilities. "
-        'Examples: \'{"verbosity": "minimal"}\', '
-        '\'{"verbosity": {"minimal": 0.8, "standard": 0.2}}\'. '
-        "If not provided, uses default behavior (standard verbosity).",
-    )
-
-    # Audio-native mode arguments
-    parser.add_argument(
-        "--audio-native",
-        action="store_true",
-        default=False,
-        help="Enable audio-native mode using DiscreteTimeAudioNativeAgent with VoiceStreamingUserSimulator. "
-        "This enables full-duplex voice simulation using audio native APIs.",
-    )
-    parser.add_argument(
-        "--audio-native-provider",
-        type=str,
-        choices=[
-            "openai",
-            "openai_live",
-            "gemini",
-            "xai",
-            "nova",
-            "qwen",
-            "avartha_pipecat",
-            "phonic",
-            "livekit",
-            "launa",
-        ],
-        default=DEFAULT_AUDIO_NATIVE_PROVIDER,
-        help=f"Audio native API provider. Default is '{DEFAULT_AUDIO_NATIVE_PROVIDER}'.",
-    )
-    parser.add_argument(
-        "--cascaded-config",
-        type=str,
-        default=None,
-        help="Cascaded config preset name for livekit provider. "
-        "Available presets: 'default', 'openai-thinking'. "
-        "See tau2.data_model.cascaded for details.",
-    )
-    parser.add_argument(
-        "--audio-native-model",
-        type=str,
-        default=None,
-        help="Audio native model to use. If not specified, uses the default model for the selected provider. "
-        "For avartha_pipecat, it is only a label, since --avartha-base-url "
-        "selects the agent.",
-    )
-    parser.add_argument(
-        "--avartha-base-url",
-        default=None,
-        help=(
-            "URL of the hosted Avartha agent the avartha_pipecat provider calls, "
-            "https://<host>/inference/serverless/pipecat/v1/public/<agent_id>. "
-            "Required for that provider, which also needs the live extra and "
-            "AVARTHA_API_KEY."
-        ),
-    )
-    parser.add_argument(
-        "--live-config",
-        type=json.loads,
-        default=None,
-        help="JSON config for openai_live: backend_model (required), voice, and optional frontend_prompt/backend_prompt overrides.",
-    )
-    parser.add_argument(
-        "--realtime-generation",
-        action=argparse.BooleanOptionalAction,
-        default=None,
-        help="Run user LLM/TTS generation without blocking audio ticks. "
-        "Defaults to enabled for openai_live and avartha_pipecat and disabled for "
-        "other providers. "
-        "Use --no-realtime-generation to disable.",
-    )
-    parser.add_argument(
-        "--reasoning-effort",
-        type=str,
-        choices=["minimal", "low", "medium", "high", "xhigh"],
-        default=None,
-        help="Reasoning effort for thinking models. Only applies to providers that support it (e.g. OpenAI).",
-    )
-    parser.add_argument(
-        "--tick-duration",
-        type=float,
-        default=DEFAULT_TICK_DURATION_SECONDS,
-        help=f"Tick duration in seconds for audio-native mode. Default is {DEFAULT_TICK_DURATION_SECONDS}.",
-    )
-    parser.add_argument(
-        "--max-steps-seconds",
-        type=int,
-        default=None,
-        help=f"Maximum conversation duration in seconds. Default is {DEFAULT_MAX_STEPS_SECONDS}; τ-Entity uses {DEFAULT_ELICITATION_MAX_STEPS_SECONDS}.",
-    )
-    parser.add_argument(
-        "--speech-complexity",
-        type=str,
-        choices=[
-            "control",
-            "regular",
-            # Single-feature ablations
-            "control_audio",
-            "control_accents",
-            "control_behavior",
-            # Pairwise ablations
-            "control_audio_accents",
-            "control_audio_behavior",
-            "control_accents_behavior",
-        ],
-        default=DEFAULT_SPEECH_COMPLEXITY,
-        help=f"Speech complexity level for audio effects. Default is '{DEFAULT_SPEECH_COMPLEXITY}'.",
-    )
-    parser.add_argument(
-        "--channel-effects-mode",
-        choices=("light", "regular", "heavy"),
-        default=DEFAULT_CHANNEL_EFFECTS_MODE,
-        help="Caller channel overlay for voice runs; regular keeps existing acoustics.",
-    )
-    parser.add_argument(
-        "--speech-effects-mode",
-        choices=("light", "regular", "heavy"),
-        default=DEFAULT_SPEECH_EFFECTS_MODE,
-        help="Caller speech-behavior overlay for voice runs; regular keeps existing behavior.",
-    )
-
-    # Audio-native: Sample rates
-    parser.add_argument(
-        "--pcm-sample-rate",
-        type=int,
-        default=DEFAULT_PCM_SAMPLE_RATE,
-        help=f"User simulator PCM synthesis sample rate. Default is {DEFAULT_PCM_SAMPLE_RATE}.",
-    )
-    parser.add_argument(
-        "--telephony-rate",
-        type=int,
-        default=DEFAULT_TELEPHONY_RATE,
-        help=f"API/agent telephony sample rate (OpenAI Realtime API). Default is {DEFAULT_TELEPHONY_RATE}.",
-    )
-
-    # Audio-native: Turn-taking thresholds
-    parser.add_argument(
-        "--wait-to-respond-other",
-        type=float,
-        default=DEFAULT_WAIT_TO_RESPOND_THRESHOLD_OTHER_SECONDS,
-        help=f"Min time since OTHER (agent) spoke before user responds (seconds). Default is {DEFAULT_WAIT_TO_RESPOND_THRESHOLD_OTHER_SECONDS}.",
-    )
-    parser.add_argument(
-        "--wait-to-respond-self",
-        type=float,
-        default=DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS,
-        help=f"Min time since SELF (user) spoke before responding (seconds). Default is {DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS}.",
-    )
-    parser.add_argument(
-        "--yield-when-interrupted",
-        type=float,
-        default=DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
-        help=f"How long user keeps speaking when agent interrupts (seconds). Default is {DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS}.",
-    )
-    parser.add_argument(
-        "--yield-when-interrupting",
-        type=float,
-        default=DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS,
-        help=f"How long user keeps speaking when user interrupts agent (seconds). Default is {DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS}.",
-    )
-    parser.add_argument(
-        "--interruption-check-interval",
-        type=float,
-        default=DEFAULT_INTERRUPTION_CHECK_INTERVAL_SECONDS,
-        help=f"Interval for checking interruptions (seconds). Default is {DEFAULT_INTERRUPTION_CHECK_INTERVAL_SECONDS}.",
-    )
-    parser.add_argument(
-        "--integration-duration",
-        type=float,
-        default=DEFAULT_INTEGRATION_DURATION_SECONDS,
-        help=f"Integration duration for linearization (seconds). Default is {DEFAULT_INTEGRATION_DURATION_SECONDS}.",
-    )
-    parser.add_argument(
-        "--silence-annotation-threshold",
-        type=float,
-        default=DEFAULT_SILENCE_ANNOTATION_THRESHOLD_SECONDS,
-        help=f"Silence threshold for adding annotations to conversation history (seconds). Default is {DEFAULT_SILENCE_ANNOTATION_THRESHOLD_SECONDS}.",
-    )
-
-    # Audio-native: Agent behavior flags
-    # Prompt format
-    prompt_format_group = parser.add_mutually_exclusive_group()
-    prompt_format_group.add_argument(
-        "--xml-prompt",
-        action="store_true",
-        default=False,
-        help="Use XML tags in system prompt (overrides auto-detection).",
-    )
-    prompt_format_group.add_argument(
-        "--no-xml-prompt",
-        action="store_true",
-        default=False,
-        help="Use plain text system prompt without XML tags (overrides auto-detection).",
-    )
-
-    from tau2.domains.intake.cli import add_intake_run_args
-
-    add_intake_run_args(parser)
-
-    # Knowledge domain arguments
-    parser.add_argument(
-        "--retrieval-config",
-        type=str,
-        default=None,
-        choices=sorted(get_all_retrieval_config_names()),
-        help=(
-            "Knowledge retrieval config name (banking_knowledge domain). "
-            "Offline: no_knowledge, full_kb, golden_retrieval, bm25, bm25_grep, grep_only. "
-            "Requires OPENAI_API_KEY: openai_embeddings*, alltools. "
-            "Requires OPENROUTER_API_KEY: qwen_embeddings*, alltools-qwen. "
-            "Requires sandbox-runtime: terminal_use*, alltools, alltools-qwen. "
-            "Default for banking_knowledge: alltools (BM25 + dense + shell)."
-        ),
-    )
-    parser.add_argument(
-        "--retrieval-config-kwargs",
-        type=json.loads,
-        default=None,
-        help="Arguments to pass to the retrieval config constructor as JSON (e.g., '{\"top_k\": 10}').",
+        metavar="JSON",
+        help='Semantic judge overrides, e.g. {"model": "...", "model_args": {...}}.',
     )
 
     # Resume mode
@@ -501,15 +232,69 @@ def add_run_args(parser):
     parser.add_argument(
         "--review-model",
         type=str,
-        default=DEFAULT_LLM_EVAL_USER_SIMULATOR,
-        help=f"LLM model to use for review calls. Default is {DEFAULT_LLM_EVAL_USER_SIMULATOR}.",
+        default=DEFAULT_LLM_REVIEW,
+        help=f"OpenRouter model ID used for review calls. Default is {DEFAULT_LLM_REVIEW}.",
     )
     parser.add_argument(
-        "--hallucination-retries",
-        type=int,
-        default=3,
-        help="Max retries when a user simulator hallucination is detected (full-duplex only). Set to 0 to disable.",
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Print the resolved run configuration as JSON without running anything.",
     )
+
+
+def communicate_scoring_from_args(args: argparse.Namespace):
+    """The explicit communicate-info scorer a run command requests, if any."""
+    if args.communicate_scorer is None and args.communicate_judge is None:
+        return None
+    scorer = CommunicateScorer(args.communicate_scorer or CommunicateScorer.SEMANTIC)
+    if scorer == CommunicateScorer.SUBSTRING:
+        if args.communicate_judge is not None:
+            raise ValueError("--communicate-judge applies to the semantic scorer")
+        return CommunicateScoring(scorer=scorer)
+    return CommunicateScoring(
+        judge=SemanticCommunicateSettings.model_validate(args.communicate_judge or {})
+    )
+
+
+def config_from_args(args: argparse.Namespace) -> RunConfig:
+    """Build the run configuration a `tau2 run` command line requests."""
+    kwargs = dict(
+        domain=args.domain,
+        task_set_name=args.task_set_name,
+        task_split_name=args.task_split_name,
+        task_ids=args.task_ids,
+        num_tasks=args.num_tasks,
+        agent=args.agent,
+        llm_agent=args.agent_llm,
+        user=args.user,
+        num_trials=args.num_trials,
+        max_steps=args.max_steps,
+        max_errors=args.max_errors,
+        timeout=args.timeout,
+        enforce_communication_protocol=args.enforce_communication_protocol,
+        save_to=args.save_to,
+        max_concurrency=args.max_concurrency,
+        seed=args.seed,
+        log_level=args.log_level,
+        verbose_logs=args.verbose_logs,
+        max_retries=args.max_retries,
+        retry_delay=args.retry_delay,
+        auto_resume=args.auto_resume,
+        auto_review=args.auto_review,
+        review_mode=args.review_mode,
+        review_model=args.review_model,
+    )
+    if args.agent_llm_args is not None:
+        kwargs["llm_args_agent"] = args.agent_llm_args
+    if args.user_llm is not None:
+        kwargs["llm_user"] = args.user_llm
+    if args.user_llm_args is not None:
+        kwargs["llm_args_user"] = args.user_llm_args
+    communicate_scoring = communicate_scoring_from_args(args)
+    if communicate_scoring is not None:
+        kwargs["communicate_scoring"] = communicate_scoring
+    return RunConfig(**kwargs)
 
 
 def _get_version() -> str:
@@ -519,10 +304,11 @@ def _get_version() -> str:
 
 
 def run_intro():
-    """Display a rich intro page describing what tau-bench can do."""
+    """Display an intro page describing what this framework can do."""
     from rich import box
     from rich.console import Console
     from rich.panel import Panel
+    from rich.syntax import Syntax
     from rich.table import Table
     from rich.text import Text
 
@@ -532,70 +318,14 @@ def run_intro():
     # ── Banner ──────────────────────────────────────────────────────────
     banner = Text(justify="center")
     banner.append("\n")
-    banner.append("tau-bench", style="bold cyan")
+    banner.append("tau-bench airline (text, English)", style="bold cyan")
     banner.append(f"  v{version}\n", style="dim")
     banner.append(
         "A simulation framework for evaluating\n"
-        "conversational customer-service agents\n",
+        "conversational airline customer-service agents\n",
         style="italic",
     )
-    console.print(
-        Panel(
-            banner,
-            border_style="cyan",
-            padding=(1, 4),
-        )
-    )
-
-    # ── Modes ───────────────────────────────────────────────────────────
-    modes_table = Table(
-        title="Communication Modes",
-        box=box.SIMPLE_HEAVY,
-        title_style="bold magenta",
-        show_edge=False,
-        pad_edge=False,
-        padding=(0, 2),
-    )
-    modes_table.add_column("Mode", style="bold", no_wrap=True)
-    modes_table.add_column("Description")
-    modes_table.add_row(
-        "Half-duplex (text)",
-        "Turn-based text conversations. Agent and user take turns exchanging messages.",
-    )
-    modes_table.add_row(
-        "Full-duplex (voice)",
-        "Real-time audio-native voice using streaming APIs (OpenAI, Gemini, xAI).",
-    )
-    console.print(modes_table)
-    console.print()
-
-    # ── Domains ─────────────────────────────────────────────────────────
-    domain_table = Table(
-        title="Domains",
-        box=box.SIMPLE_HEAVY,
-        title_style="bold magenta",
-        show_edge=False,
-        pad_edge=False,
-        padding=(0, 2),
-    )
-    domain_table.add_column("Domain", style="bold", no_wrap=True)
-    domain_table.add_column("Description")
-    domain_table.add_row(
-        "airline", "Flight booking, cancellation, and customer support"
-    )
-    domain_table.add_row("retail", "Order management, returns, and product inquiries")
-    domain_table.add_row("telecom", "Telecom account management and troubleshooting")
-    domain_table.add_row(
-        "banking_knowledge",
-        "Knowledge-retrieval-based customer service with configurable RAG pipelines",
-    )
-    domain_table.add_row("mock", "Lightweight test domain for development")
-    domain_table.add_row(
-        "intake",
-        "τ-Entity: agent-directed voice elicitation; optional scaffolded ablation",
-    )
-    console.print(domain_table)
-    console.print()
+    console.print(Panel(banner, border_style="cyan", padding=(1, 4)))
 
     # ── Commands ────────────────────────────────────────────────────────
     cmd_table = Table(
@@ -608,49 +338,34 @@ def run_intro():
     )
     cmd_table.add_column("Command", style="bold green", no_wrap=True)
     cmd_table.add_column("What it does")
-    cmd_table.add_row("tau2 run", "Run a benchmark evaluation against a domain")
+    cmd_table.add_row("tau2 run", "Run agents on the airline tasks")
     cmd_table.add_row("tau2 view", "Browse and inspect simulation results")
-    cmd_table.add_row(
-        "tau2 play", "Interactive manual mode \u2014 play the agent yourself"
-    )
-    cmd_table.add_row("tau2 domain <name>", "Show detailed documentation for a domain")
-    cmd_table.add_row("tau2 leaderboard", "Display the current leaderboard")
+    cmd_table.add_row("tau2 domain airline", "Show the airline domain documentation")
     cmd_table.add_row(
         "tau2 review <path>", "Run LLM-based conversation review on results"
     )
     cmd_table.add_row(
         "tau2 evaluate-trajs <paths>", "Re-evaluate trajectories and recompute rewards"
     )
-    cmd_table.add_row("tau2 submit prepare", "Prepare a leaderboard submission")
-    cmd_table.add_row("tau2 submit validate", "Validate a submission directory")
-    cmd_table.add_row("tau2 check-data", "Verify data directory is set up correctly")
     cmd_table.add_row(
-        "tau2 intake-tasks", "Enumerate, reproduce, and verify frozen τ-Entity tasks"
+        "tau2 convert-results <path>", "Convert results between json and dir formats"
     )
-    cmd_table.add_row("tau2 start", "Start background servers")
+    cmd_table.add_row("tau2 check-data", "Verify data directory is set up correctly")
     cmd_table.add_row("tau2 intro", "Show this page")
     console.print(cmd_table)
     console.print()
 
     # ── Quick Start ─────────────────────────────────────────────────────
-    from rich.syntax import Syntax
-
     quick_start = (
         "# 1. Verify your setup\n"
         "tau2 check-data\n"
         "\n"
-        "# 2. Run a text (half-duplex) evaluation\n"
-        "tau2 run --domain airline --agent-llm gpt-4.1 --user-llm gpt-4.1 "
+        "# 2. Run an evaluation on 5 airline tasks\n"
+        "tau2 run --agent-llm openai/gpt-6.1-sol --user-llm openai/gpt-6.1-sol "
         "--num-trials 1 --num-tasks 5\n"
         "\n"
-        "# 3. Run a voice (full-duplex) evaluation\n"
-        "tau2 run --domain retail --audio-native --num-tasks 1 --verbose-logs\n"
-        "\n"
-        "# 4. Browse results\n"
-        "tau2 view\n"
-        "\n"
-        "# 5. Check the leaderboard\n"
-        "tau2 leaderboard"
+        "# 3. Browse results\n"
+        "tau2 view"
     )
     console.print(
         Panel(
@@ -672,269 +387,34 @@ def main():
     parser = argparse.ArgumentParser(description="Tau2 command line interface")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Saved-run diagnostics are registered by their owning package.
-    from tau2.judges.cli import add_judges_args
-
-    add_judges_args(
-        subparsers.add_parser("judges", help="Saved-run diagnostic judging and reports")
-    )
-
-    from tau2.config import DEFAULT_TASK_SUBSET_SEED, DEFAULT_TASK_SUBSET_SIZE
-    from tau2.multilingual.factory.cli import add_factory_args
-    from tau2.task_subsets.cli import add_tasks_args
-
-    add_tasks_args(
-        subparsers.add_parser("tasks", help="Frozen canonical task subsets"),
-        default_size=DEFAULT_TASK_SUBSET_SIZE,
-        default_seed=DEFAULT_TASK_SUBSET_SEED,
-    )
-    add_factory_args(
-        subparsers.add_parser(
-            "factory", help="Staged language authoring and publication"
-        )
-    )
-
     # Run command
-    from tau2.runner.cli import add_benchmarks_args
-
-    add_benchmarks_args(
-        subparsers.add_parser(
-            "benchmarks", help="Released benchmark manifests and their pins"
-        )
-    )
-
-    run_parser = subparsers.add_parser("run", help="Run a benchmark")
+    run_parser = subparsers.add_parser("run", help="Run agents on the airline tasks")
     add_run_args(run_parser)
 
     def run_command(args):
-        from tau2.runner.cli import selected_benchmark
-
-        args.benchmark = selected_benchmark(args) or "none"
-        benchmark_mode = args.benchmark != "none"
-        if not args.audio_native and (
-            args.channel_effects_mode != "regular"
-            or args.speech_effects_mode != "regular"
-        ):
-            raise ValueError("Voice effects modes require --audio-native")
-        if not benchmark_mode and (
-            len(args.domain or []) > 1 or len(args.language or []) > 1
-        ):
-            raise ValueError(
-                "Custom/text runs require one domain and at most one language"
-            )
-        if not benchmark_mode and args.global_limit is not None:
-            raise ValueError("--global-limit applies to released benchmarks")
-        if benchmark_mode:
-            from tau2.runner.cli import check_benchmark_selection
-
-            check_benchmark_selection(args)
-        user_persona_config = None
-        if args.user_persona:
-            user_persona_config = PersonaConfig.from_dict(args.user_persona)  # noqa: F841
-
-        # Build audio-native config if enabled
-        audio_native_config = None
-        if args.audio_native:
-            # Resolve model based on provider if not specified
-            audio_native_model = args.audio_native_model
-            if audio_native_model is None:
-                audio_native_model = DEFAULT_AUDIO_NATIVE_MODELS[
-                    args.audio_native_provider
-                ]
-
-            avartha_config = None
-            if args.audio_native_provider == "avartha_pipecat":
-                if not args.avartha_base_url:
-                    run_parser.error(
-                        "--avartha-base-url is required when "
-                        "--audio-native-provider avartha_pipecat"
-                    )
-                try:
-                    avartha_config = AvarthaPipecatConfig(
-                        base_url=args.avartha_base_url
-                    )
-                except ValueError as exc:
-                    run_parser.error(f"invalid Avartha configuration: {exc}")
-
-            # Determine use_xml_prompt: defaults to False (plain text)
-            use_xml_prompt = False
-            if args.xml_prompt:
-                use_xml_prompt = True
-
-            audio_native_config = AudioNativeConfig(
-                # Provider
-                provider=args.audio_native_provider,
-                model=audio_native_model,
-                avartha_config=avartha_config,
-                cascaded_request=(
-                    CascadedConfigRequest(preset=args.cascaded_config)
-                    if args.cascaded_config is not None
-                    else None
-                ),
-                reasoning_effort=args.reasoning_effort,
-                **({"voice": args.voice} if args.voice is not None else {}),
-                live_config=args.live_config,
-                realtime_generation=args.realtime_generation,
-                # Timing
-                tick_duration_seconds=args.tick_duration,
-                **(
-                    {"max_steps_seconds": args.max_steps_seconds}
-                    if args.max_steps_seconds is not None
-                    else {}
-                ),
-                # Sample rates
-                pcm_sample_rate=args.pcm_sample_rate,
-                telephony_rate=args.telephony_rate,
-                # Turn-taking thresholds
-                wait_to_respond_threshold_other_seconds=args.wait_to_respond_other,
-                wait_to_respond_threshold_self_seconds=args.wait_to_respond_self,
-                yield_threshold_when_interrupted_seconds=args.yield_when_interrupted,
-                yield_threshold_when_interrupting_seconds=args.yield_when_interrupting,
-                interruption_check_interval_seconds=args.interruption_check_interval,
-                integration_duration_seconds=args.integration_duration,
-                silence_annotation_threshold_seconds=args.silence_annotation_threshold,
-                # Agent behavior
-                use_xml_prompt=use_xml_prompt,
-            )
-
         # Set global LLM log mode (used by verbose logging)
         from tau2.utils.llm_utils import set_llm_log_mode
 
         set_llm_log_mode(args.llm_log_mode)
-
-        # Shared config kwargs
-        from tau2.multilingual.runtime import extension_for_domain
-
-        pack_extension = (
-            extension_for_domain(
-                args.language[0] if args.language else DEFAULT_LANGUAGE,
-                args.domain[0],
-            )
-            if not benchmark_mode and args.domain and args.localize_db is not False
-            else None
-        )
-        shared_kwargs = dict(
-            localize_db=args.localize_db,
-            **(
-                {}
-                if benchmark_mode or not args.language
-                else {"language": args.language[0]}
-            ),
-            pack_extension=pack_extension,
-            task_set_name=args.task_set_name,
-            task_split_name=args.task_split_name,
-            task_ids=args.task_ids,
-            num_tasks=args.num_tasks,
-            num_trials=args.num_trials,
-            max_errors=args.max_errors,
-            timeout=args.timeout,
-            save_to=args.save_to,
-            max_concurrency=args.max_concurrency,
-            workers=0 if benchmark_mode else (args.workers or 0),
-            provider_limits=parse_provider_limits(args.provider_limit),
-            seed=args.seed,
-            log_level=args.log_level,
-            verbose_logs=args.verbose_logs,
-            max_retries=args.max_retries,
-            retry_delay=args.retry_delay,
-            auto_resume=args.auto_resume,
-            auto_review=args.auto_review,
-            review_mode=args.review_mode,
-            review_model=args.review_model,
-            hallucination_retries=args.hallucination_retries,
-            retrieval_config=args.retrieval_config,
-            retrieval_config_kwargs=args.retrieval_config_kwargs,
-        )
-
-        from tau2.domains.intake.cli import elicitation_config_from_args
-
-        if not benchmark_mode and args.domain:
-            shared_kwargs["domain"] = args.domain[0]
-        from tau2.multilingual.cli import communicate_scoring_from_args
-
-        communicate_scoring = communicate_scoring_from_args(args)
-        if communicate_scoring is not None:
-            shared_kwargs["communicate_scoring"] = communicate_scoring
-        shared_kwargs["elicitation"] = elicitation_config_from_args(args)
-        if args.user_llm is not None:
-            shared_kwargs["llm_user"] = args.user_llm
-        if args.user_llm_args is not None:
-            shared_kwargs["llm_args_user"] = args.user_llm_args
-
-        if audio_native_config is not None:
-            config = VoiceRunConfig(
-                **shared_kwargs,
-                audio_native_config=audio_native_config,
-                speech_complexity=args.speech_complexity,
-                channel_effects_mode=args.channel_effects_mode,
-                speech_effects_mode=args.speech_effects_mode,
-                pass3_condition=getattr(args, "pass3_condition", None),
-                voice_sampling_seed=getattr(args, "voice_sampling_seed", None),
-                audio_debug=getattr(args, "audio_debug", False),
-                audio_taps=getattr(args, "audio_taps", False),
-            )
-        else:
-            config = TextRunConfig(
-                **shared_kwargs,
-                agent=args.agent,
-                llm_agent=args.agent_llm,
-                llm_args_agent=args.agent_llm_args,
-                user=args.user,
-                max_steps=args.max_steps,
-                enforce_communication_protocol=args.enforce_communication_protocol,
-            )
-
-        if benchmark_mode:
-            from tau2.runner.cli import run_benchmark
-
-            return run_benchmark(args, config)
+        config = config_from_args(args)
         if args.dry_run:
-            config.validate()
             print(config.model_dump_json(indent=2))
             return config
         return run_domain(config)
 
     run_parser.set_defaults(func=run_command)
 
-    from tau2.runner.cli import add_pass3_args
-
-    add_pass3_args(
-        subparsers.add_parser(
-            "run-pass3", help="Run Pass^3 on three ordinary or crossed trials"
-        ),
-        add_run_args=add_run_args,
-        run_command=run_command,
-    )
-
-    from tau2.multilingual.cli import add_languages_args
-
-    languages_parser = subparsers.add_parser(
-        "languages", help="Inspect and validate published language packs"
-    )
-    add_languages_args(languages_parser)
-    from tau2.domains.intake.tasks.cli import add_intake_tasks_args
-
-    add_intake_tasks_args(
-        subparsers.add_parser("intake-tasks", help="Generate and verify τ-Entity tasks")
-    )
-
-    # Play command
-    play_parser = subparsers.add_parser(
-        "play", help="Play manual mode - interact with a domain as the agent"
-    )
-    play_parser.set_defaults(func=lambda args: run_manual_mode())
-
     # View command
     view_parser = subparsers.add_parser("view", help="View simulation results")
     view_parser.add_argument(
         "--dir",
         type=str,
-        help="Directory containing simulation files, or a benchmark matrix root. Defaults to data/simulations.",
+        help="Directory containing simulation run directories. Defaults to data/simulations.",
     )
     view_parser.add_argument(
         "--file",
         type=str,
-        help="Path to a simulation results file, ordinary run directory, or benchmark matrix root",
+        help="Path to a simulation results file or run directory",
     )
     view_parser.add_argument(
         "--only-show-failed",
@@ -947,15 +427,10 @@ def main():
         help="Only show tasks that failed in all trials.",
     )
     view_parser.add_argument(
-        "--expanded-ticks",
-        action="store_true",
-        help="Show expanded tick view instead of consolidated (for full-duplex simulations).",
-    )
-    view_parser.add_argument(
         "--max-tool-result-chars",
         type=int,
         default=500,
-        help="Truncate tool results (e.g. retrieved knowledge articles) to this many characters. Default: 500.",
+        help="Truncate tool results to this many characters. Default: 500.",
     )
     view_parser.add_argument(
         "--full-tool-results",
@@ -969,51 +444,13 @@ def main():
     domain_parser.add_argument(
         "domain",
         type=str,
-        help="Name of the domain to show documentation for (e.g., 'airline', 'mock')",
+        help="Name of the domain to show documentation for (e.g., 'airline')",
     )
     domain_parser.set_defaults(func=lambda args: run_show_domain(args))
 
-    # Start command
-    start_parser = subparsers.add_parser("start", help="Start all servers")
-    start_parser.set_defaults(func=lambda args: run_start_servers())
-
-    # Worker command (executes simulations for a `tau2 run --workers N` controller)
-    worker_parser = subparsers.add_parser(
-        "worker",
-        help="Run a worker process that executes simulations for a tau2 controller "
-        "(see `tau2 run --workers`).",
-    )
-    worker_parser.add_argument(
-        "--controller",
-        type=str,
-        required=True,
-        help="Controller base URL, e.g. http://127.0.0.1:8321",
-    )
-    worker_parser.add_argument(
-        "--slots",
-        type=int,
-        default=10,
-        help="Concurrent simulations this worker holds (default: 10).",
-    )
-    worker_parser.add_argument(
-        "--worker-id",
-        type=str,
-        default=None,
-        help="Worker identity in controller logs (default: hostname-pid).",
-    )
-
-    def worker_command(args):
-        from tau2.runner.worker import run_worker_command
-
-        return run_worker_command(
-            controller=args.controller, slots=args.slots, worker_id=args.worker_id
-        )
-
-    worker_parser.set_defaults(func=worker_command)
-
     # Intro command
     intro_parser = subparsers.add_parser(
-        "intro", help="Show an overview of tau-bench and available commands"
+        "intro", help="Show an overview of the framework and available commands"
     )
     intro_parser.set_defaults(func=lambda args: run_intro())
 
@@ -1068,11 +505,6 @@ def main():
         help="Output path for the reviewed results (only used for single file)",
     )
     review_parser.add_argument(
-        "--interruption-enabled",
-        action="store_true",
-        help="Flag indicating that interruption was enabled for these simulations",
-    )
-    review_parser.add_argument(
         "--show-details",
         action="store_true",
         help="Show detailed review results for each simulation",
@@ -1105,43 +537,10 @@ def main():
     review_parser.add_argument(
         "--review-model",
         type=str,
-        default=DEFAULT_LLM_EVAL_USER_SIMULATOR,
-        help=f"LLM model to use for review calls. Default is {DEFAULT_LLM_EVAL_USER_SIMULATOR}.",
+        default=DEFAULT_LLM_REVIEW,
+        help=f"OpenRouter model ID used for review calls. Default is {DEFAULT_LLM_REVIEW}.",
     )
     review_parser.set_defaults(func=lambda args: run_review(args))
-
-    # Leaderboard command
-    leaderboard_parser = subparsers.add_parser(
-        "leaderboard", help="Show the tau-bench leaderboard"
-    )
-    leaderboard_parser.add_argument(
-        "--domain",
-        "-d",
-        type=str,
-        choices=["retail", "airline", "telecom", "banking_knowledge"],
-        default=None,
-        help="Show leaderboard for a specific domain. If not specified, shows overall leaderboard.",
-    )
-    leaderboard_parser.add_argument(
-        "--metric",
-        "-m",
-        type=str,
-        choices=["pass_1", "pass_2", "pass_3", "pass_4", "cost"],
-        default="pass_1",
-        help="Metric to rank by. Default is 'pass_1'.",
-    )
-    leaderboard_parser.add_argument(
-        "--limit",
-        "-n",
-        type=int,
-        default=None,
-        help="Limit the number of entries to show.",
-    )
-    leaderboard_parser.set_defaults(func=lambda args: run_leaderboard(args))
-
-    from tau2.scripts.leaderboard.cli import add_submit_args
-
-    add_submit_args(subparsers.add_parser("submit", help="Leaderboard submissions"))
 
     # Convert results format command
     convert_parser = subparsers.add_parser(
@@ -1188,7 +587,6 @@ def run_view_simulations(args):
         only_show_failed=args.only_show_failed,
         only_show_all_failed=args.only_show_all_failed,
         sim_dir=args.dir,
-        expanded_ticks=args.expanded_ticks,
         max_tool_result_length=max_tool_result_length,
     )
 
@@ -1197,12 +595,6 @@ def run_show_domain(args):
     from tau2.scripts.show_domain_doc import main as domain_main
 
     domain_main(args.domain)
-
-
-def run_start_servers():
-    from tau2.scripts.start_servers import main as start_main
-
-    start_main()
 
 
 def run_check_data():
@@ -1269,7 +661,6 @@ def run_review(args):
             results_path=str(results_file),
             mode=mode,
             output_path=args.output if len(results_files) == 1 else None,
-            interruption_enabled=args.interruption_enabled,
             show_details=args.show_details,
             max_concurrency=args.max_concurrency,
             limit=args.limit,
@@ -1277,23 +668,6 @@ def run_review(args):
             log_llm=args.log_llm,
             review_model=args.review_model,
         )
-
-
-def run_manual_mode():
-    from tau2.scripts.manual_mode import main as manual_main
-
-    manual_main()
-
-
-def run_leaderboard(args):
-    """Show the tau-bench leaderboard."""
-    from tau2.scripts.leaderboard.leaderboard import show_leaderboard
-
-    show_leaderboard(
-        domain=args.domain,
-        metric=args.metric,
-        limit=args.limit,
-    )
 
 
 def run_convert_results(args):

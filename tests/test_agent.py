@@ -1,25 +1,15 @@
 import pytest
 
-from tau2.agent.llm_agent import LLMAgent, LLMSoloAgent
+from tau2.agent.llm_agent import LLMAgent
 from tau2.data_model.message import AssistantMessage, UserMessage
 
 
 @pytest.fixture
 def agent(get_environment) -> LLMAgent:
     return LLMAgent(
-        llm="gpt-4o-mini",
+        llm="openai/gpt-6.1-sol",
         tools=get_environment().get_tools(),
         domain_policy=get_environment().get_policy(),
-    )
-
-
-@pytest.fixture
-def solo_agent(get_environment, base_task) -> LLMSoloAgent:
-    return LLMSoloAgent(
-        llm="gpt-4o-mini",
-        tools=get_environment().get_tools(),
-        domain_policy=get_environment().get_policy(),
-        task=base_task,
     )
 
 
@@ -56,13 +46,3 @@ def test_agent_set_state(agent: LLMAgent, first_user_message: UserMessage):
             ),
         ]
     )
-
-
-@pytest.mark.live_api
-def test_solo_agent(solo_agent: LLMSoloAgent):
-    agent_state = solo_agent.get_init_state()
-    assert agent_state is not None
-    agent_msg, agent_state = solo_agent.generate_next_message(None, agent_state)
-    assert isinstance(agent_msg, AssistantMessage)
-    assert agent_state is not None
-    assert len(agent_state.messages) == 1

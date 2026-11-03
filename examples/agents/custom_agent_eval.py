@@ -42,7 +42,7 @@ class VerboseAgent(HalfDuplexAgent[list]):
         self,
         tools: list[Tool],
         domain_policy: str,
-        llm: str = "openai/gpt-4.1-mini",
+        llm: str = "openai/gpt-6.1-sol",
         llm_args: Optional[dict] = None,
     ):
         super().__init__(tools=tools, domain_policy=domain_policy)
@@ -111,16 +111,17 @@ if __name__ == "__main__":
         get_tasks,
         run_simulation,
     )
+    from tau2.user.personas import assign_user_persona
 
-    # Load a task from the mock domain
-    tasks = get_tasks("mock", task_ids=["create_task_1"])
+    # Load a task from the airline domain
+    tasks = get_tasks("airline", task_ids=["0"])
     task = tasks[0]
     print(f"Task: {task.id}")
-    print(f"User scenario: {task.user_scenario.instructions[:100]}...")
+    print(f"User scenario: {str(task.user_scenario)[:100]}...")
     print()
 
     # Build the environment
-    env = build_environment("mock")
+    env = build_environment("airline")
     print(f"Domain policy: {env.get_policy()[:100]}...")
     print(f"Available tools: {[t.name for t in env.get_tools()]}")
     print()
@@ -129,20 +130,23 @@ if __name__ == "__main__":
     agent = VerboseAgent(
         tools=env.get_tools(),
         domain_policy=env.get_policy(),
-        llm="openai/gpt-4.1-mini",
+        llm="openai/gpt-6.1-sol",
     )
 
-    # Build the user simulator (from the registry, since we're not customizing it)
+    # Build the user simulator (from the registry, since we're not customizing it),
+    # with the same caller persona a `tau2 run` would assign to this task
     user = build_user(
         "user_simulator",
         env,
         task,
-        llm="openai/gpt-4.1-mini",
+        llm="openai/gpt-6.1-sol",
+        llm_args={"reasoning_effort": "low"},
+        persona_config=assign_user_persona("airline", task.id, seed=300),
     )
 
     # Wire into an orchestrator
     orchestrator = Orchestrator(
-        domain="mock",
+        domain="airline",
         agent=agent,
         user=user,
         environment=env,

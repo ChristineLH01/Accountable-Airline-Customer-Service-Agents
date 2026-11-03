@@ -4,11 +4,11 @@ from tau2.evaluator import reviewer
 from tau2.runner import batch
 
 
-def test_review_simulation_uses_custom_model_for_full_turn_based(monkeypatch):
+def test_review_simulation_uses_custom_model_for_full_review(monkeypatch):
     captured = {}
     expected_review = object()
     expected_auth = object()
-    review_model = "gpt-4.1"
+    review_model = "openai/gpt-6-luna"
 
     def fake_review(**kwargs):
         captured["review_model"] = kwargs["review_model"]
@@ -31,7 +31,7 @@ def test_review_simulation_uses_custom_model_for_full_turn_based(monkeypatch):
         staticmethod(fake_classify),
     )
 
-    simulation = SimpleNamespace(messages=["message"], ticks=None)
+    simulation = SimpleNamespace(messages=["message"])
 
     review, auth = reviewer.review_simulation(
         simulation=simulation,
@@ -52,58 +52,7 @@ def test_review_simulation_uses_custom_model_for_full_turn_based(monkeypatch):
     }
 
 
-def test_review_simulation_uses_custom_model_for_full_duplex(monkeypatch):
-    captured = {}
-    expected_review = object()
-    expected_auth = object()
-    review_model = "openrouter/anthropic/claude-sonnet-4"
-
-    def fake_review(**kwargs):
-        captured["review_model"] = kwargs["review_model"]
-        captured["full_trajectory"] = kwargs["full_trajectory"]
-        captured["interruption_enabled"] = kwargs["interruption_enabled"]
-        return expected_review
-
-    def fake_classify(**kwargs):
-        captured["auth_model"] = kwargs["model"]
-        captured["auth_ticks"] = kwargs["ticks"]
-        return expected_auth
-
-    monkeypatch.setattr(
-        reviewer.FullDuplexConversationReviewer,
-        "review",
-        staticmethod(fake_review),
-    )
-    monkeypatch.setattr(
-        reviewer.FullDuplexAuthenticationClassifier,
-        "classify",
-        staticmethod(fake_classify),
-    )
-
-    simulation = SimpleNamespace(messages=[], ticks=["tick"])
-
-    review, auth = reviewer.review_simulation(
-        simulation=simulation,
-        task=object(),
-        mode=reviewer.ReviewMode.FULL,
-        user_info=object(),
-        policy="policy",
-        interruption_enabled=True,
-        review_model=review_model,
-    )
-
-    assert review is expected_review
-    assert auth is expected_auth
-    assert captured == {
-        "review_model": review_model,
-        "full_trajectory": ["tick"],
-        "interruption_enabled": True,
-        "auth_model": review_model,
-        "auth_ticks": ["tick"],
-    }
-
-
-def test_review_simulation_uses_custom_model_for_user_only_turn_based(
+def test_review_simulation_uses_custom_model_for_user_only_review(
     monkeypatch,
 ):
     captured = {}
@@ -121,7 +70,7 @@ def test_review_simulation_uses_custom_model_for_user_only_turn_based(
         staticmethod(fake_review),
     )
 
-    simulation = SimpleNamespace(messages=["message"], ticks=None)
+    simulation = SimpleNamespace(messages=["message"])
 
     review, auth = reviewer.review_simulation(
         simulation=simulation,
@@ -139,50 +88,11 @@ def test_review_simulation_uses_custom_model_for_user_only_turn_based(
     }
 
 
-def test_review_simulation_uses_custom_model_for_user_only_full_duplex(
-    monkeypatch,
-):
-    captured = {}
-    expected_review = object()
-    review_model = "anthropic/claude-sonnet-4-5"
-
-    def fake_review(**kwargs):
-        captured["review_model"] = kwargs["review_model"]
-        captured["full_trajectory"] = kwargs["full_trajectory"]
-        captured["interruption_enabled"] = kwargs["interruption_enabled"]
-        return expected_review
-
-    monkeypatch.setattr(
-        reviewer.FullDuplexUserOnlyReviewer,
-        "review",
-        staticmethod(fake_review),
-    )
-
-    simulation = SimpleNamespace(messages=[], ticks=["tick"])
-
-    review, auth = reviewer.review_simulation(
-        simulation=simulation,
-        task=object(),
-        mode=reviewer.ReviewMode.USER,
-        user_info=object(),
-        interruption_enabled=True,
-        review_model=review_model,
-    )
-
-    assert review is expected_review
-    assert auth is None
-    assert captured == {
-        "review_model": review_model,
-        "full_trajectory": ["tick"],
-        "interruption_enabled": True,
-    }
-
-
 def test_auto_review_uses_custom_review_model(monkeypatch):
     captured = {}
     expected_review = SimpleNamespace(has_errors=False)
     expected_auth = object()
-    review_model = "gpt-4.1-mini"
+    review_model = "openai/gpt-6-luna"
 
     def fake_review_simulation(**kwargs):
         captured["review_model"] = kwargs["review_model"]
@@ -203,13 +113,10 @@ def test_auto_review_uses_custom_review_model(monkeypatch):
         task=task,
         review_mode="full",
         review_model=review_model,
-        user="user_simulator",
-        llm_user="gpt-4.1",
-        llm_args_user={},
-        user_persona_config=None,
-        user_voice_settings=None,
+        user_info=batch.review_user_info(
+            "user_simulator", "openai/gpt-6.1-sol", {}, None, use_tools=False
+        ),
         policy="policy",
-        is_audio_native=False,
     )
 
     assert simulation.review is expected_review
@@ -218,3 +125,25 @@ def test_auto_review_uses_custom_review_model(monkeypatch):
         "review_model": review_model,
         "mode": reviewer.ReviewMode.FULL,
     }
+
+
+def test_review_user_info_renders_the_callers_persona():
+    """Reviewers see the same caller scaffold and persona block as the run."""
+    from tau2.user.personas import assign_user_persona
+    from tau2.user.user_simulator import build_user_system_prompt
+
+    persona = assign_user_persona("airline", "0", seed=300)
+    assert persona is not None and persona.persona_id == "priya_patil"
+    info = batch.review_user_info("user_simulator", "m", {}, persona, use_tools=False)
+    assert info.persona_config == persona
+    assert "<PERSONA_GUIDELINES>" not in info.global_simulation_guidelines
+    assert persona.gender_guidance in info.global_simulation_guidelines
+    # The caller prompt is exactly these guidelines followed by the scenario.
+    from tau2.user.guidelines import simulation_guidelines
+
+    prompt = build_user_system_prompt(
+        "scenario",
+        persona_config=persona,
+        guidelines=simulation_guidelines(use_tools=False),
+    )
+    assert prompt.startswith(info.global_simulation_guidelines.strip())

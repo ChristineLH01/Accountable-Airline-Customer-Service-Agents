@@ -1,17 +1,25 @@
 # AGENTS.md — src/tau2/domains/
 
-> See `README.md` for full architecture and data storage details.
+> See `README.md` for the domain layout, the airline data files and how to add
+> a domain.
 
 ## Rules for Working in This Directory
+
+### Shipped Domains
+
+`airline` is the only domain in `src/tau2/domains/` and the only one
+registered in `src/tau2/registry.py`. The `mock` domain used by tests lives in
+`tests/mock_domain/` (data in `tests/mock_domain/data/`) and is registered at
+test time by `tests/conftest.py`; do not import it from `src/`.
 
 ### Required Files per Domain
 
 Every domain in `src/tau2/domains/<name>/` MUST have:
 
-- `data_model.py` — `DB` subclass (e.g., `FlightDB(DB)`)
-- `tools.py` — `ToolKitBase` subclass with `@is_tool(ToolType.READ|WRITE|GENERIC|THINK)` decorated methods
-- `environment.py` — exports `get_environment()`, `get_tasks()`, and optionally `get_tasks_split()`
-- `utils.py` — data paths pointing to `data/tau2/domains/<name>/`
+- `data_model.py`: `DB` subclass (e.g. `FlightDB(DB)`)
+- `tools.py`: `ToolKitBase` subclass with `@is_tool(ToolType.READ|WRITE|GENERIC|THINK)` decorated methods
+- `environment.py`: exports `get_environment()`, `get_tasks()` and `get_tasks_split()`
+- `utils.py`: data paths pointing to `data/tau2-<name>/`
 - `__init__.py`
 
 Optional: `user_tools.py`, `user_data_model.py`.
@@ -25,50 +33,49 @@ registry.register_domain(get_environment, "domain_name")
 registry.register_tasks(get_tasks, "domain_name", get_task_splits=get_tasks_split)
 ```
 
-If you forget this step, the domain will not be usable via CLI.
+Without this the domain is not usable from the CLI (`--domain` choices come
+from the registry). Tests and scripts may instead register on the global
+`tau2.registry.registry` at runtime, as `tests/conftest.py` does.
 
 ### Task Split Rules
 
-- The split file MUST include a `base` split — this is the default for evaluation.
-- Split file naming follows `split_<tasks_file_stem>.json` (e.g., `split_tasks.json` for `tasks.json`).
-- `train`/`test` splits are for RL experiments only.
+- The split file MUST include a `base` split; it is the default for evaluation.
+- Split file naming follows `split_<tasks_file_stem>.json` (e.g. `split_tasks.json` for `tasks.json`).
+- Airline also ships `train` (30 tasks) and `test` (20 tasks) splits.
 
 ### Tool Decorator Types
 
-Use the correct `ToolType` — this affects evaluation:
+Use the correct `ToolType`; it drives metrics and `partial_action_reward`:
 
-- `ToolType.READ` — read-only queries (e.g., look up a flight)
-- `ToolType.WRITE` — state-mutating operations (e.g., cancel a reservation)
-- `ToolType.GENERIC` — general-purpose
-- `ToolType.THINK` — internal reasoning (no side effects)
+- `ToolType.READ`: read-only queries (e.g. look up a reservation)
+- `ToolType.WRITE`: state-mutating operations (e.g. cancel a reservation)
+- `ToolType.GENERIC`: utilities (e.g. `calculate`, `transfer_to_human_agents`)
+- `ToolType.THINK`: internal reasoning, no side effects
 
-### Solo Mode
+Evaluation replay re-executes only tools with `mutates_state=True`, which
+`is_tool` infers as `True` for WRITE and `False` otherwise. Pass
+`mutates_state` explicitly for exceptions. A non-mutating tool that actually
+changes the DB would be skipped on replay and break the DB check.
 
-If the domain does NOT support solo mode, raise `ValueError("Solo mode not supported for <domain>")` in `get_environment()`. Do not silently ignore it.
+### Data Files and Prompts
 
-### Data Files
-
-Domain data lives in `data/tau2/domains/<name>/`. Be careful modifying `db.json`/`db.toml` and `tasks.json` — the framework depends on these at runtime. Always run `tau2 check-data` after changing data files.
+Domain data lives in `data/tau2-<name>/`. Be careful modifying
+`db.json`, `policy.md`, `tasks.json` and `user_personas.json`: the framework
+reads them at runtime, and the airline policy, tasks and personas are pinned
+by `tests/test_domains/test_airline/test_prompts_airline.py` to reproduce the
+τ-bench 2.0 English prompts. Run `tau2 check-data` and the airline tests after
+changing data files.
 
 ### Tool Arguments
 
-Some tools accept `dict` arguments and convert them internally to Pydantic models. When adding new tools, prefer typed Pydantic model arguments. If accepting `dict`, convert explicitly (e.g., `FlightInfo(**flight)`).
+Some tools accept `dict` arguments and convert them internally to Pydantic
+models. When adding new tools, prefer typed Pydantic model arguments. If
+accepting `dict`, convert explicitly (e.g. `FlightInfo(**flight)`).
 
 ### Tests
 
 Tests go in `tests/test_domains/test_<domain_name>/`:
-- `test_tools_<domain_name>.py` — test tools via `environment.get_response(ToolCall(...))`
-- `test_user_tools_<domain_name>.py` — if user tools exist
+- `test_tools_<domain_name>.py`: test tools via `environment.get_response(ToolCall(...))`
+- `test_user_tools_<domain_name>.py`: if user tools exist
 
-Run: `pytest tests/test_domains/test_<domain_name>/`
-
-### The `banking_knowledge` Domain (Extended Pattern)
-
-The `banking_knowledge` domain extends the standard domain pattern significantly:
-
-- **Additional source files**: `retrieval.py` (variant registry and policy builder), `retrieval_mixins.py` (tool mixins for KB_search, grep, shell), `retrieval_toolkits.py` (composed toolkits), `db_query.py` (structured DB query helpers).
-- **Dynamic tools and policy**: Which tools the agent gets and which system prompt it sees depend on the `--retrieval-config` flag (e.g., `qwen_embeddings`, `grep_only`, `terminal_use`). This is resolved in `get_environment()` via the `retrieval_variant` parameter.
-- **Dual data sources**: `TransactionalDB` (users, accounts, referrals) + `KnowledgeBase` (document corpus for retrieval).
-- **Extended data directory**: `data/tau2/domains/banking_knowledge/` contains `documents/` (700+ JSON docs), `prompts/` (per-variant policy templates), and `tasks/` (individual task JSON files) in addition to `db.json`.
-- **Retrieval pipeline**: Uses the `src/tau2/knowledge/` module for embeddings, BM25, grep, reranking, and sandboxed shell access. See `src/tau2/knowledge/README.md`.
-- **Solo mode**: Not supported (raises `ValueError`).
+Run: `uv run pytest tests/test_domains/test_<domain_name>/`

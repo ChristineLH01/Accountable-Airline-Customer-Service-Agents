@@ -1,9 +1,9 @@
 import json
 
 import pytest
+from mock_domain.utils import MOCK_TASK_SET_PATH
 
 from tau2.run import get_tasks
-from tau2.utils import DATA_DIR
 from tau2.utils.utils import get_dict_hash, show_dict_diff
 
 
@@ -24,7 +24,7 @@ def task_with_initial_state_initialization_data_name():
 
 @pytest.fixture
 def tasks_dict():
-    task_file = DATA_DIR / "tau2" / "domains" / "mock" / "tasks.json"
+    task_file = MOCK_TASK_SET_PATH
     with open(task_file, "r") as f:
         task_dicts = json.load(f)
     tasks_dict = {v["id"]: v for v in task_dicts}
