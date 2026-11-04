@@ -70,7 +70,11 @@ def _check(**overrides):
 def test_checklist_edge_cases():
     assert _check()["decision"] == DENY
     assert _check(already_flown="yes", business="yes")["decision"] == TRANSFER
-    assert _check(cancel_reason="unknown")["decision"] == NEED_INFO
+    assert _check(cancel_reason="unknown")["decision"] == DENY
+    assert _check(cancel_reason="unknown")["reason_obtained"] is False
+    assert _check(cancel_reason="unknown", has_insurance="yes")["decision"] == NEED_INFO
+    assert _check(cancel_reason="unknown", business="yes")["decision"] == ALLOW
+    assert _check(cancel_reason="unknown", already_flown="yes")["decision"] == TRANSFER
     assert _check(booked_within_24h="unknown")["decision"] == NEED_INFO
     assert _check(has_insurance="yes", cancel_reason="health")["decision"] == ALLOW
     assert _check(has_insurance="yes")["decision"] == DENY

@@ -13,6 +13,11 @@ The checklist follows the airline policy, section "Cancel flight":
 
 The condition names match the Cancel sheet of our gold labels, so B's checklist
 can be compared with the gold answer condition by condition.
+
+An unknown cancellation reason only blocks a decision when it can change the
+outcome, that is when the reservation has insurance and no other condition is
+met. Otherwise the decision is made, and reason_obtained records that the
+policy step of asking for the reason was skipped.
 """
 
 from __future__ import annotations
@@ -92,13 +97,24 @@ def evaluate_cancellation(
         if conditions[k] == YES
     ]
     missing = [k for k, v in conditions.items() if v == UNKNOWN]
-
-    if reason == "unknown":
-        decision = NEED_INFO
-        explanation = (
-            "The policy requires the reason for cancellation. Ask the user for it."
+    open_conditions = [
+        k
+        for k in (
+            "booked_within_24h",
+            "cancelled_by_airline",
+            "business",
+            "insurance_covers_reason",
         )
-    elif flown == UNKNOWN:
+        if conditions[k] == UNKNOWN
+    ]
+    reason_obtained = reason != "unknown"
+    ask_reason = (
+        ""
+        if reason_obtained
+        else " The policy also requires you to ask the user for the reason for cancellation."
+    )
+
+    if flown == UNKNOWN:
         decision = NEED_INFO
         explanation = (
             "Check whether any segment has already been flown before deciding."
@@ -111,19 +127,27 @@ def evaluate_cancellation(
         )
     elif met:
         decision = ALLOW
-        explanation = "Cancellation is allowed because: " + ", ".join(met) + "."
-    elif missing:
-        decision = NEED_INFO
         explanation = (
-            "No condition is met yet, but these are still unknown: "
-            + ", ".join(missing)
-            + "."
+            "Cancellation is allowed because: " + ", ".join(met) + "." + ask_reason
         )
+    elif open_conditions:
+        decision = NEED_INFO
+        if open_conditions == ["insurance_covers_reason"] and not reason_obtained:
+            explanation = (
+                "The reservation has insurance, so the decision depends on the "
+                "reason for cancellation. Ask the user for it, then check again."
+            )
+        else:
+            explanation = (
+                "No condition is met yet, but these are still unknown: "
+                + ", ".join(open_conditions)
+                + ". Look them up, then check again."
+            )
     else:
         decision = DENY
         explanation = (
             "None of the cancellation conditions is met, so the reservation cannot be "
-            "cancelled. There is no option to cancel without a refund."
+            "cancelled. There is no option to cancel without a refund." + ask_reason
         )
 
     return {
@@ -132,6 +156,7 @@ def evaluate_cancellation(
         "conditions": conditions,
         "conditions_met": met,
         "unknown": missing,
+        "reason_obtained": reason_obtained,
         "evidence": evidence,
         "explanation": explanation,
     }
