@@ -46,7 +46,8 @@ Low-level builders:
 - `build_environment(domain, *, env_kwargs=None)`
 - `build_agent(agent_name, environment, *, llm=None, llm_args=None, task=None)`:
   calls the registered factory with the environment's tools and
-  `agent_domain_policy(environment)` (the policy plus `AGENT_LANGUAGE_CLAUSE`).
+  `agent_domain_policy(environment)` (the policy plus
+  `AGENT_DECISION_EXPLANATION_CLAUSE` and `AGENT_LANGUAGE_CLAUSE`).
 - `build_user(user_name, environment, task, *, llm=None, llm_args=None, persona_config=None)`
 
 High-level builder:

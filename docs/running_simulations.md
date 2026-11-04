@@ -202,17 +202,19 @@ result = run_simulation(orchestrator)
 print(f"Reward: {result.reward_info.reward}")
 ```
 
-### Reproducing the τ-bench 2.0 prompts
+### The prompts and the τ-bench 2.0 baseline
 
 The registered builders reproduce the English airline prompts of τ-bench 2.0
-exactly; `tests/test_domains/test_airline/test_prompts_airline.py` pins them
-with a digest. Two pieces are added on top of the raw data, so keep them when
-you build instances yourself:
+plus one agent instruction, the decision-explanation clause;
+`tests/test_domains/test_airline/test_prompts_airline.py` pins them with a
+digest and checks that they match τ-bench 2.0 once the clause is removed. Two
+pieces are added on top of the raw data, so keep them when you build instances
+yourself:
 
 - **Agent policy**: `agent_domain_policy(env)` returns
-  `data/tau2-airline/policy.md` plus `"\n\n"` plus
-  `AGENT_LANGUAGE_CLAUSE` (both in `tau2.runner.build`). Passing
-  `env.get_policy()` alone omits the clause.
+  `data/tau2-airline/policy.md`, `AGENT_DECISION_EXPLANATION_CLAUSE` and
+  `AGENT_LANGUAGE_CLAUSE` (all in `tau2.runner.build`), joined by `"\n\n"`.
+  Passing `env.get_policy()` alone omits both clauses.
 - **Caller persona**: the user simulator's system prompt is the scaffold in
   `tau2.user.guidelines` with a persona from
   `data/tau2-airline/user_personas.json` inserted. There are two

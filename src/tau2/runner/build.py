@@ -30,6 +30,24 @@ AGENT_LANGUAGE_CLAUSE = (
     "and structured outputs in English exactly as specified."
 )
 
+# Project addition to the agent's policy: the agent explains every decision on
+# a customer request, so its explanations can be compared with the golden
+# reasons in data/tau2-airline/mannual_label.json. It is the only difference
+# from the tau-bench 2.0 English agent prompt.
+AGENT_DECISION_EXPLANATION_CLAUSE = (
+    "Whenever you decide on a user's request to book, modify, or cancel a "
+    "reservation (including its flights, cabin, baggage, passengers, or "
+    "insurance), or to give a refund or compensation, tell the user the "
+    "decision and the reason for it in the same message, whether you approve "
+    "the request, deny it, or approve only part of it. The reason must name "
+    "the policy rule that applies and the facts from the user's profile, "
+    "reservation, or flights that make it apply, such as the cabin class, when "
+    "the booking was made, whether travel insurance was purchased, the "
+    "membership level, the flight status, or the price difference. Keep the "
+    "reason brief and base it only on this policy and on information from the "
+    "user or your tools."
+)
+
 # =============================================================================
 # Low-level build functions (no RunConfig needed)
 # =============================================================================
@@ -57,8 +75,18 @@ def build_environment(
 
 
 def agent_domain_policy(environment: Environment) -> str:
-    """The policy given to the agent: the domain policy plus the language clause."""
-    return environment.get_policy() + "\n\n" + AGENT_LANGUAGE_CLAUSE
+    """The policy given to the agent.
+
+    The domain policy, then the decision-explanation clause, then the language
+    clause, separated by blank lines.
+    """
+    return "\n\n".join(
+        [
+            environment.get_policy(),
+            AGENT_DECISION_EXPLANATION_CLAUSE,
+            AGENT_LANGUAGE_CLAUSE,
+        ]
+    )
 
 
 def user_tools_for_task(environment: Environment, task: Task) -> Optional[list[Tool]]:

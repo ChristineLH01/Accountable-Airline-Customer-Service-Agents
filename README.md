@@ -32,11 +32,20 @@ airline text task in English. It contains:
 | Runner and CLI | `src/tau2/runner/`, `src/tau2/cli.py` | Batch runs with concurrency, retries, checkpointing and resume; `tau2` command |
 | Metrics and viewer | `src/tau2/metrics/`, `src/tau2/scripts/` | pass^k metrics, interactive results browser |
 
-The prompts the agent and the user simulator receive are **byte-identical to
-tau-bench 2.0's English airline text runs**. A test
-(`tests/test_domains/test_airline/test_prompts_airline.py`) pins them, so
-results stay comparable with upstream English airline runs that use the same
-models.
+The prompts the agent and the user simulator receive are **tau-bench 2.0's
+English airline text prompts plus one instruction**: the agent must tell the
+customer the decision and its policy-based reason whenever it approves, denies
+or partly approves a request (`AGENT_DECISION_EXPLANATION_CLAUSE` in
+`src/tau2/runner/build.py`). A test
+(`tests/test_domains/test_airline/test_prompts_airline.py`) pins the prompts and
+checks that, without that instruction, they are byte-identical to tau-bench
+2.0's.
+
+The agent's explanations are judged against an answer key,
+`data/tau2-airline/mannual_label.json`: the team's final decision and reason
+for each task (`golden_decision`, `golden_reason`), alongside the three
+annotators' labels until consensus is reached. Load it with
+`tau2.domains.airline.golden_reasons.load_golden_reasons()`.
 
 ## Quickstart
 
@@ -160,7 +169,8 @@ orchestrator. The [agent guide](src/tau2/agent/README.md) and
 ## Repository layout
 
 ```
-data/tau2-airline/           db.json, policy.md, tasks.json, split_tasks.json, user_personas.json
+data/tau2-airline/           db.json, policy.md, tasks.json, split_tasks.json, user_personas.json,
+                             mannual_label.json (golden decisions and reasons)
 data/simulations/            run outputs (git-ignored)
 src/tau2/
 ├── agent/                   LLMAgent, LLMGTAgent, HalfDuplexAgent base

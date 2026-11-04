@@ -21,7 +21,7 @@ tests/
 ├── test_evaluator/                # Communicate-info scoring (semantic judge, substring)
 ├── test_runner/test_batch.py      # Batch loop: trials, checkpointing, resume, fatal errors
 └── test_domains/
-    ├── test_airline/              # Airline tools; pinned agent/user prompts
+    ├── test_airline/              # Airline tools; pinned agent/user prompts; golden-reason answer key
     └── test_mock/                 # Mock domain tools
 ```
 
@@ -54,5 +54,7 @@ registers it as domain `mock`. Fixtures such as `base_task`,
 - Use the mock domain for framework behavior and the airline domain for
   airline-specific behavior (tools, policy, prompts).
 - If you change the airline policy, tasks, user scaffold, personas or the
-  agent's language clause on purpose, update the digest in
+  agent's explanation or language clause on purpose, update the digests in
   `test_domains/test_airline/test_prompts_airline.py` and say why.
+- `test_domains/test_airline/test_golden_reasons.py` checks that the answer
+  key, `data/tau2-airline/mannual_label.json`, has an entry for every task.
