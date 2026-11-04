@@ -3,6 +3,7 @@ from typing import Callable, Dict, Optional
 from loguru import logger
 from pydantic import BaseModel
 
+from tau2.agent.gated_cancel_agent import create_gated_cancel_agent
 from tau2.agent.llm_agent import (
     LLMGTAgent,
     create_llm_agent,
@@ -243,6 +244,7 @@ try:
 
     # Agent factories
     registry.register_agent_factory(create_llm_agent, "llm_agent")
+    registry.register_agent_factory(create_gated_cancel_agent, "gated_cancel_agent")
     registry.register_agent_factory(
         create_llm_gt_agent,
         "llm_agent_gt",

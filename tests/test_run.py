@@ -67,7 +67,7 @@ def test_get_options():
     """Test that we can get available options from the registry"""
     options = get_options()
     assert "airline" in options.domains
-    assert set(options.agents) == {"llm_agent", "llm_agent_gt"}
+    assert set(options.agents) == {"llm_agent", "llm_agent_gt", "gated_cancel_agent"}
     assert options.users == ["user_simulator"]
 
 
