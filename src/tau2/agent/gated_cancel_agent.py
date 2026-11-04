@@ -36,8 +36,8 @@ CHECK_TOOL = "check_eligibility"
 
 B_INSTRUCTION = (
     AGENT_INSTRUCTION
+    + "\n\n"
     + """
-
 Cancellation checklist (mandatory):
 - Before you call cancel_reservation, you must call check_eligibility for that reservation.
 - Fill every field from tool results such as get_reservation_details, get_user_details and
