@@ -48,11 +48,12 @@ Use Pydantic `BaseModel` for state classes (see `LLMAgentState` in
 ### Prompts Are Pinned
 
 `LLMAgent`'s system prompt (`AGENT_INSTRUCTION` and `SYSTEM_PROMPT` in
-`llm_agent.py`), the policy file and `AGENT_LANGUAGE_CLAUSE` in
-`tau2/runner/build.py` together reproduce the τ-bench 2.0 English agent
-prompt. `tests/test_domains/test_airline/test_prompts_airline.py` pins them
-with a digest; changing any of them changes results comparability, so update
-the digest only deliberately.
+`llm_agent.py`), the policy file, `AGENT_DECISION_EXPLANATION_CLAUSE` and
+`AGENT_LANGUAGE_CLAUSE` in `tau2/runner/build.py` make up the agent prompt;
+without the explanation clause it is the τ-bench 2.0 English agent prompt.
+`tests/test_domains/test_airline/test_prompts_airline.py` pins them with
+digests; changing any of them changes results comparability, so update the
+digests only deliberately.
 
 ### Registration
 

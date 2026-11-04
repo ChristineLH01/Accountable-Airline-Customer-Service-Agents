@@ -80,9 +80,11 @@ response, state = agent.generate_next_message(user_msg, state)
 ```
 
 `agent_domain_policy(env)` is the policy the CLI gives every agent: the
-airline `policy.md` followed by an English-language clause
-(`AGENT_LANGUAGE_CLAUSE` in `tau2/runner/build.py`). Use it to keep prompts
-identical to the τ-bench 2.0 English runs.
+airline `policy.md`, then a clause asking the agent to explain each decision on
+a customer request (`AGENT_DECISION_EXPLANATION_CLAUSE`), then an
+English-language clause (`AGENT_LANGUAGE_CLAUSE`), both in
+`tau2/runner/build.py`. Use it so custom agents get the same instructions as
+the standard agent.
 
 ## How to develop a new agent
 

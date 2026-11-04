@@ -80,7 +80,8 @@ which no airline task uses). See
    runtime on the global `tau2.registry.registry`.
 3. Add tests under `tests/test_domains/test_<name>/`.
 
-The agent's policy is the domain policy followed by `AGENT_LANGUAGE_CLAUSE`
+The agent's policy is the domain policy followed by
+`AGENT_DECISION_EXPLANATION_CLAUSE` and `AGENT_LANGUAGE_CLAUSE`
 (`tau2/runner/build.py`). A domain without a
 `data/tau2-<name>/user_personas.json` runs its user simulator without a
 caller persona.

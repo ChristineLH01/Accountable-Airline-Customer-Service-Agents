@@ -83,7 +83,9 @@ src/tau2/
 
 Other top-level directories:
 - `data/tau2-airline/` — `db.json`, `policy.md`, `tasks.json` (50 tasks),
-  `split_tasks.json` (`base`/`train`/`test`), `user_personas.json`
+  `split_tasks.json` (`base`/`train`/`test`), `user_personas.json`,
+  `mannual_label.json` (answer key of golden decisions and reasons; see
+  Evaluation)
 - `tests/` — pytest suite; `tests/mock_domain/` is a tiny test-only domain
   registered as `mock` by `tests/conftest.py`
 - `examples/agents/` — custom agent examples
@@ -117,15 +119,18 @@ import constants from there rather than redefining them.
 
 ### Prompts are pinned
 
-The agent sees `policy.md` plus `AGENT_LANGUAGE_CLAUSE` (`runner/build.py`).
-The user simulator sees the English text scaffold (`user/guidelines.py`) with a
-caller persona (`user/personas.py`, chosen by the task's caller gender from
-`user_personas.json`). Together these reproduce tau-bench 2.0's English airline
-prompts byte for byte, and
-`tests/test_domains/test_airline/test_prompts_airline.py` pins their digest. If
-you intentionally change the policy, tasks, scaffold, personas or clause,
-update the digest and call it out: results are only comparable across runs
-with identical prompts.
+The agent sees `policy.md`, then `AGENT_DECISION_EXPLANATION_CLAUSE`, then
+`AGENT_LANGUAGE_CLAUSE` (`runner/build.py`, `agent_domain_policy`). The
+explanation clause is the project's addition: it asks the agent to tell the
+customer the decision and its policy-based reason whenever it approves, denies
+or partly approves a request. The user simulator sees the English text scaffold
+(`user/guidelines.py`) with a caller persona (`user/personas.py`, chosen by the
+task's caller gender from `user_personas.json`). Without the explanation
+clause these are tau-bench 2.0's English airline prompts byte for byte.
+`tests/test_domains/test_airline/test_prompts_airline.py` pins both facts with
+two digests. If you intentionally change the policy, tasks, scaffold, personas
+or clauses, update the digests and call it out: results are only comparable
+across runs with identical prompts.
 
 ### Evaluation
 
@@ -134,6 +139,14 @@ the task's `reward_basis` (airline: `DB` and `COMMUNICATE`). `COMMUNICATE` uses
 a semantic LLM judge by default (`--communicate-scorer substring` for the
 original substring match). Reviews (`--auto-review`, `tau2 review`) and
 authentication classification are diagnostics and never change the reward.
+
+The answer key for the agent's decision explanations is
+`data/tau2-airline/mannual_label.json`: one entry per task with the final
+`golden_decision` and `golden_reason`. Until the team reaches consensus, each
+entry also holds the three annotators' `golden_decision_1/2/3` and
+`golden_reason_1/2/3`. Load the final labels with
+`tau2.domains.airline.golden_reasons.load_golden_reasons()`, which ignores the
+annotator fields and returns `None` for labels that are still empty.
 
 ## Testing
 

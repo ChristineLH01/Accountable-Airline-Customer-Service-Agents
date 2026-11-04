@@ -1,9 +1,13 @@
-"""The airline agent and user-simulator prompts stay those of tau-bench 2.0 (English).
+"""The airline agent and user-simulator prompts are pinned.
 
-The digest below was computed from the system prompts that the unmodified
-tau-bench 2.0 code sent for every airline task (English text run, default
-seed). If a change to the policy, tasks, scaffold, personas or language clause
-is intended, update the digest and say so in the change description: results
+They are tau-bench 2.0's English airline prompts (English text run, default
+seed) with one project addition: the agent's policy also carries
+``AGENT_DECISION_EXPLANATION_CLAUSE``, which asks the agent to explain each
+decision on a customer request. ``TAU_BENCH_2_ENGLISH_AIRLINE_PROMPTS_SHA256``
+is the digest of the unmodified tau-bench 2.0 prompts and must still match once
+that clause is removed; ``PROJECT_AIRLINE_PROMPTS_SHA256`` pins the prompts as
+they are sent. If a change to the policy, tasks, scaffold, personas or clauses
+is intended, update the digests and say so in the change description: results
 are only comparable between runs with identical prompts.
 """
 
@@ -12,11 +16,18 @@ import json
 
 from tau2.data_model.simulation import RunConfig
 from tau2.run import get_tasks
-from tau2.runner.build import AGENT_LANGUAGE_CLAUSE, build_orchestrator
+from tau2.runner.build import (
+    AGENT_DECISION_EXPLANATION_CLAUSE,
+    AGENT_LANGUAGE_CLAUSE,
+    build_orchestrator,
+)
 from tau2.user.personas import load_persona_catalog
 
 TAU_BENCH_2_ENGLISH_AIRLINE_PROMPTS_SHA256 = (
     "5babeadd9f68e53f9493cafa2d57cb4c81c06c606249aba931e778c7d1a22e44"
+)
+PROJECT_AIRLINE_PROMPTS_SHA256 = (
+    "828d98e583c96fdf87ec05ed5a9b864c37bb6845c795d044bdb7606e1d6f76d3"
 )
 
 
@@ -30,18 +41,40 @@ def _system_prompts() -> tuple[list[str], list[str]]:
     return agent_prompts, user_prompts
 
 
-def test_prompts_match_tau_bench_2_english():
+def _digest(agent_prompts: list[str], user_prompts: list[str]) -> str:
+    return hashlib.sha256(
+        json.dumps([agent_prompts, user_prompts]).encode()
+    ).hexdigest()
+
+
+def test_prompts_are_pinned():
     agent_prompts, user_prompts = _system_prompts()
-    digest = hashlib.sha256(json.dumps([agent_prompts, user_prompts]).encode())
-    assert digest.hexdigest() == TAU_BENCH_2_ENGLISH_AIRLINE_PROMPTS_SHA256
+    assert _digest(agent_prompts, user_prompts) == PROJECT_AIRLINE_PROMPTS_SHA256
+
+
+def test_prompts_match_tau_bench_2_english_apart_from_explanation_clause():
+    agent_prompts, user_prompts = _system_prompts()
+    without_clause = [
+        prompt.replace("\n\n" + AGENT_DECISION_EXPLANATION_CLAUSE, "", 1)
+        for prompt in agent_prompts
+    ]
+    assert _digest(without_clause, user_prompts) == (
+        TAU_BENCH_2_ENGLISH_AIRLINE_PROMPTS_SHA256
+    )
 
 
 def test_prompt_components():
     agent_prompts, user_prompts = _system_prompts()
     catalog = load_persona_catalog("airline")
+    clauses = (
+        AGENT_DECISION_EXPLANATION_CLAUSE
+        + "\n\n"
+        + AGENT_LANGUAGE_CLAUSE
+        + "\n</policy>"
+    )
+    assert all(prompt.endswith(clauses) for prompt in agent_prompts)
     assert all(
-        prompt.endswith(AGENT_LANGUAGE_CLAUSE + "\n</policy>")
-        for prompt in agent_prompts
+        prompt.count(AGENT_DECISION_EXPLANATION_CLAUSE) == 1 for prompt in agent_prompts
     )
     # Task 0's caller (Emma Kim) is female; every task names exactly one persona.
     assert "You are a female customer (she/her)." in user_prompts[0]
