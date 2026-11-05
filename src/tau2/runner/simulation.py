@@ -9,6 +9,7 @@ from typing import Optional
 
 from loguru import logger
 
+from tau2.data_model.reason_scoring import ReasonScoring
 from tau2.data_model.semantic_communication import CommunicateScoring
 from tau2.data_model.simulation import SimulationRun
 from tau2.evaluator.evaluator import EvaluationType, evaluate_simulation
@@ -22,6 +23,7 @@ def run_simulation(
     evaluation_type: EvaluationType = EvaluationType.ALL,
     env_kwargs: Optional[dict] = None,
     communicate_scoring: Optional[CommunicateScoring] = None,
+    reason_scoring: Optional[ReasonScoring] = None,
 ) -> SimulationRun:
     """Run a simulation and evaluate the result.
 
@@ -40,6 +42,8 @@ def run_simulation(
             constructor.
         communicate_scoring: How `communicate_info` is scored; defaults to the
             pinned semantic LLM judge.
+        reason_scoring: How the agent's decision explanations are scored against
+            the golden labels; defaults to the reason judge gating the reward.
 
     Returns:
         SimulationRun with reward_info attached.
@@ -58,6 +62,7 @@ def run_simulation(
         print(result.reward_info.reward)
     """
     communicate_scoring = communicate_scoring or CommunicateScoring()
+    reason_scoring = reason_scoring or ReasonScoring()
 
     # Run the orchestrator
     simulation = orchestrator.run()
@@ -82,12 +87,15 @@ def run_simulation(
         domain=domain,
         env_kwargs=env_kwargs,
         communicate_scoring=communicate_scoring,
+        reason_scoring=reason_scoring,
     )
     simulation.reward_info = reward_info
 
+    reason_check = reward_info.reason_check
     logger.info(
         f"Simulation complete: domain={domain}, task={task.id}, "
-        f"reward={reward_info.reward}"
+        f"reward={reward_info.reward}, task_reward={reward_info.task_reward}, "
+        f"reason={'n/a' if reason_check is None else reason_check.reward}"
     )
 
     return simulation

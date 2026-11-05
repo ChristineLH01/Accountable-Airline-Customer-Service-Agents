@@ -56,10 +56,11 @@ options:
 
 ```text
 usage: tau2 run [-h] [--domain {airline}] [--num-trials NUM_TRIALS]
-                [--agent {llm_agent,llm_agent_gt}] [--agent-llm AGENT_LLM]
-                [--agent-llm-args AGENT_LLM_ARGS] [--user {user_simulator}]
-                [--user-llm USER_LLM] [--user-llm-args USER_LLM_ARGS]
-                [--task-set-name {airline}] [--task-split-name TASK_SPLIT_NAME]
+                [--agent {llm_agent,gated_cancel_agent,llm_agent_gt}]
+                [--agent-llm AGENT_LLM] [--agent-llm-args AGENT_LLM_ARGS]
+                [--user {user_simulator}] [--user-llm USER_LLM]
+                [--user-llm-args USER_LLM_ARGS] [--task-set-name {airline}]
+                [--task-split-name TASK_SPLIT_NAME]
                 [--task-ids TASK_IDS [TASK_IDS ...]] [--num-tasks NUM_TASKS]
                 [--max-steps MAX_STEPS] [--max-errors MAX_ERRORS] [--timeout TIMEOUT]
                 [--save-to SAVE_TO] [--max-concurrency MAX_CONCURRENCY] [--seed SEED]
@@ -67,6 +68,7 @@ usage: tau2 run [-h] [--domain {airline}] [--num-trials NUM_TRIALS]
                 [--max-retries MAX_RETRIES] [--retry-delay RETRY_DELAY]
                 [--enforce-communication-protocol]
                 [--communicate-scorer {semantic,substring}] [--communicate-judge JSON]
+                [--reason-scoring {gate,report,off}] [--reason-judge JSON]
                 [--auto-resume] [--auto-review] [--review-mode {full,user}]
                 [--review-model REVIEW_MODEL] [--dry-run]
 
@@ -76,7 +78,7 @@ options:
                         The domain to run the simulation on. Default is airline.
   --num-trials NUM_TRIALS
                         The number of times each task is run. Default is 1.
-  --agent {llm_agent,llm_agent_gt}
+  --agent {llm_agent,gated_cancel_agent,llm_agent_gt}
                         The agent implementation to use. Default is llm_agent.
   --agent-llm AGENT_LLM
                         The OpenRouter model ID of the agent's LLM. Default is
@@ -97,8 +99,8 @@ options:
                         The task set to run the simulation on. If not provided, will
                         load default task set for the domain.
   --task-split-name TASK_SPLIT_NAME
-                        The task split to run the simulation on (base, train or test).
-                        Default is 'base'.
+                        The task split to run the simulation on (base, train, test or
+                        scored). Default is 'base'.
   --task-ids TASK_IDS [TASK_IDS ...]
                         Run only these task IDs.
   --num-tasks NUM_TASKS
@@ -144,6 +146,13 @@ options:
                         1.x.
   --communicate-judge JSON
                         Semantic judge overrides, e.g. {"model": "...", "model_args":
+                        {...}}.
+  --reason-scoring {gate,report,off}
+                        Decision-reason scoring against the golden labels: 'gate'
+                        multiplies REASON into the final reward, 'report' records the
+                        judge's verdict without changing the reward, 'off' skips it.
+                        Default: gate.
+  --reason-judge JSON   Reason judge overrides, e.g. {"model": "...", "model_args":
                         {...}}.
   --auto-resume         Automatically resume from existing save file without prompting
                         (for non-interactive runs).
@@ -212,7 +221,9 @@ options:
 ## `tau2 evaluate-trajs`
 
 ```text
-usage: tau2 evaluate-trajs [-h] [-o OUTPUT_DIR] [--fresh-tasks] paths [paths ...]
+usage: tau2 evaluate-trajs [-h] [-o OUTPUT_DIR] [--fresh-tasks]
+                           [--reason-scoring {gate,report,off}] [--reason-judge JSON]
+                           paths [paths ...]
 
 positional arguments:
   paths                 Paths to trajectory files, directories, or glob patterns
@@ -224,6 +235,13 @@ options:
                         rewards. If not provided, only displays metrics.
   --fresh-tasks         Re-grade against the current task definitions from the data
                         directory instead of the ones embedded in each results file.
+  --reason-scoring {gate,report,off}
+                        Decision-reason scoring against the golden labels: 'gate'
+                        multiplies REASON into the final reward, 'report' records the
+                        judge's verdict without changing the reward, 'off' skips it.
+                        Default: the scorer recorded in each results file.
+  --reason-judge JSON   Reason judge overrides, e.g. {"model": "...", "model_args":
+                        {...}}.
 ```
 
 ## `tau2 review`

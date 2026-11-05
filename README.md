@@ -20,11 +20,11 @@ airline text task in English. It contains:
 
 | Component | Where | Notes |
 |---|---|---|
-| Airline domain | `src/tau2/domains/airline/`, `data/tau2-airline/` | Flight database, agent policy, 14 tools, 50 tasks with `base` / `train` (30) / `test` (20) splits |
+| Airline domain | `src/tau2/domains/airline/`, `data/tau2-airline/` | Flight database, agent policy, 14 tools, 50 tasks with `base` / `train` (30) / `test` (20) / `scored` (47) splits |
 | Agents | `src/tau2/agent/` | `llm_agent` (the standard tool-calling LLM agent, method A), `gated_cancel_agent` (method B: `llm_agent` plus a cancellation checklist and gate, see [below](#method-b-cancellation-checklist-and-gate)) and `llm_agent_gt` (an oracle agent that is shown the expected actions) |
 | User simulator | `src/tau2/user/` | LLM customer that follows the task scenario, with one of two reviewed English caller personas |
 | Orchestrator | `src/tau2/orchestrator/` | Turn-based loop between agent, user and environment |
-| Evaluator | `src/tau2/evaluator/` | Database end-state check, communicated-information judge, action and NL-assertion checks; optional LLM conversation review |
+| Evaluator | `src/tau2/evaluator/` | Database end-state check, communicated-information judge, decision-reason judge, action and NL-assertion checks; optional LLM conversation review |
 | Runner and CLI | `src/tau2/runner/`, `src/tau2/cli.py` | Batch runs with concurrency, retries, checkpointing and resume; `tau2` command |
 | Metrics and viewer | `src/tau2/metrics/`, `src/tau2/scripts/` | pass^k metrics, interactive results browser |
 
@@ -75,7 +75,8 @@ the resolved configuration without making any calls.
 # All 50 tasks, 4 trials each (for pass^1..pass^4), 10 conversations in parallel
 uv run tau2 run --agent-llm openai/gpt-6.1-sol --num-trials 4 --max-concurrency 10 --save-to sol-4trials
 
-# Selected tasks, or a task split (base = all 50, train = 30, test = 20)
+# Selected tasks, or a task split (base = all 50, train = 30, test = 20,
+# scored = 47: base without the disputed tasks 9, 37 and 39)
 uv run tau2 run --task-ids 0 5 12
 uv run tau2 run --task-split-name test
 
@@ -96,7 +97,7 @@ uv run tau2 run --num-tasks 5 --auto-review
 |---|---|
 | Agent model | `openai/gpt-6.1-sol`, `reasoning_effort: medium` (`--agent-llm`, `--agent-llm-args`) |
 | User simulator model | `openai/gpt-6.1-sol`, `reasoning_effort: low` (`--user-llm`, `--user-llm-args`) |
-| Judges: communicated information, NL assertions | `openai/gpt-6-luna`, `reasoning_effort: medium` (`--communicate-judge` overrides the first) |
+| Judges: communicated information, decision reasons, NL assertions | `openai/gpt-6-luna`, `reasoning_effort: medium` (`--communicate-judge` and `--reason-judge` override the first two) |
 | Conversation review (`--auto-review`, `tau2 review`) | `openai/gpt-6-luna`, `reasoning_effort: medium` (`--review-model`) |
 | Trials / concurrency / seed / max steps | 1 / 3 / 300 / 200 |
 
@@ -130,6 +131,25 @@ tasks' `reward_basis` is `[DB, COMMUNICATE]`):
   the customer, as judged by the semantic LLM judge. Use
   `--communicate-scorer substring` for the original substring match.
 
+On top of that, by default (`--reason-scoring gate`) the reward also requires:
+
+- **REASON**: the agent told the customer the task's golden decision and its
+  golden policy-based reason, as judged by an LLM against
+  `data/tau2-airline/mannual_label.json`. Tasks 9, 37 and 39 are not judged.
+
+So the final reward is `DB x COMMUNICATE x REASON`, and the τ-bench reward
+without REASON is kept as `task_reward`. Use `--reason-scoring report` to record
+the judge's verdict without changing the reward, or `off` to skip it. To run
+both agents with reason scoring and print a summary:
+
+```bash
+bash run_reason_eval.sh                    # 47 scored tasks, agents A and B
+TASKS="0 1 7 19" bash run_reason_eval.sh   # quick smoke run
+```
+
+See [docs/evaluation.md](docs/evaluation.md#decision-reason-checks-reason) for
+how the judge works and what each run records.
+
 Conversations that end abnormally (too many tool errors, step limit, timeout)
 score 0. pass^k is the probability that all k trials of a task succeed. See
 [docs/evaluation.md](docs/evaluation.md) for the full task schema.
@@ -139,7 +159,7 @@ score 0. pass^k is the probability that all k trials of a task succeed. See
 | Command | What it does |
 |---|---|
 | `tau2 view` | Browse runs: metrics, per-simulation conversations, tasks, run configuration |
-| `tau2 evaluate-trajs <paths>` | Re-score saved runs (e.g. after editing tasks, with `--fresh-tasks`) |
+| `tau2 evaluate-trajs <paths>` | Re-score saved runs (e.g. after editing tasks, with `--fresh-tasks`, or adding reason scoring with `--reason-scoring gate`) |
 | `tau2 review <path>` | LLM review of saved conversations for agent and user-simulator errors |
 | `tau2 domain airline` | Print the airline policy and the tool reference |
 | `tau2 convert-results <path>` | Convert results between one JSON file and a directory of files |
@@ -168,7 +188,8 @@ the tasks and the scoring are the same as for method A. The checklist rules
 are tested against the 31 cancellation rows of the team's policy checklist
 (`dataset/checklist_yt.xlsx`, Cancel sheet).
 
-Compare A and B on the 18 tasks that involve a cancellation:
+Compare A and B on the 15 tasks that involve a cancellation, leaving out tasks
+9, 37 and 39 (see `docs/golden_labels.md`):
 
 ```bash
 uv run pytest tests/test_method_b     # no API key needed

@@ -22,7 +22,7 @@ runner/
 
 ### Layer 1: `simulation.py`, execute
 
-`run_simulation(orchestrator, *, evaluation_type=EvaluationType.ALL, env_kwargs=None, communicate_scoring=None)`
+`run_simulation(orchestrator, *, evaluation_type=EvaluationType.ALL, env_kwargs=None, communicate_scoring=None, reason_scoring=None)`
 runs a fully constructed `Orchestrator`, records the policy and caller
 persona on the result, evaluates it and returns the `SimulationRun` with
 `reward_info` attached.
@@ -73,7 +73,8 @@ Batch execution with the operational concerns:
 - **Seeds**: one seed per trial, drawn from `config.seed`.
 - **Checkpointing**: results are saved after every simulation; an existing
   results file is resumed (with a prompt unless `auto_resume`). Changing the
-  communicate scorer between runs is refused.
+  communicate scorer, the reason scorer or the golden labels between runs is
+  refused.
 - **Retries**: failed simulations are retried `max_retries` times
   `retry_delay` seconds apart (`progress.run_with_retry`); after that a
   placeholder with `INFRASTRUCTURE_ERROR` is recorded.

@@ -28,8 +28,8 @@ the tasks and the scoring are the same as for method A.
 ```bash
 uv run pytest tests/test_method_b          # no API key needed
 
-# A vs B on the 18 tasks that involve a cancellation
-TASKS="0 1 7 9 19 24 26 28 35 37 39 41 43 44 45 47 48 49"
+# A vs B on the 15 scored tasks that involve a cancellation (9, 37, 39 excluded)
+TASKS="0 1 7 19 24 26 28 35 41 43 44 45 47 48 49"
 uv run tau2 run --agent llm_agent          --task-ids $TASKS --num-trials 1 --save-to cancel-A
 uv run tau2 run --agent gated_cancel_agent --task-ids $TASKS --num-trials 1 --save-to cancel-B
 ```

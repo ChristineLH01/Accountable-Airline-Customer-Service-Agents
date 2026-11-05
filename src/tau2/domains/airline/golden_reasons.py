@@ -6,9 +6,12 @@ reached, each entry also carries the annotators' ``golden_decision_1/2/3`` and
 ``golden_reason_1/2/3``; the loader ignores those, so the file keeps working
 once they are removed. An empty final label loads as ``None``.
 
-A judge or evaluator looks a task up with ``load_golden_reasons()[task.id]``.
+A judge or evaluator looks a task up with ``load_golden_reasons()[task.id]``
+and skips entries whose ``excluded_from_scoring`` is set; the ``scored`` task
+split holds the tasks that are not excluded.
 """
 
+import hashlib
 from pathlib import Path
 from typing import Any, Optional
 
@@ -32,6 +35,16 @@ class GoldenReason(BaseModel):
         default=None,
         description="The policy-based reason the agent should give the "
         "customer for that decision. None until labeled.",
+    )
+    excluded_from_scoring: bool = Field(
+        default=False,
+        description="Whether the task is left out of scoring and evaluation "
+        "runs because its label or answer key is disputed. Such tasks are not "
+        "in the 'scored' task split.",
+    )
+    exclusion_reason: Optional[str] = Field(
+        default=None,
+        description="Why the task is excluded from scoring.",
     )
 
     @field_validator("task_id", mode="before")
@@ -62,3 +75,8 @@ def load_golden_reasons(
     if len(reasons) != len(entries):
         raise ValueError(f"Duplicate task_id in {path}")
     return reasons
+
+
+def golden_labels_sha256(path: Path = AIRLINE_MANUAL_LABELS_PATH) -> str:
+    """SHA-256 of the label file, recorded by runs that grade against it."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()

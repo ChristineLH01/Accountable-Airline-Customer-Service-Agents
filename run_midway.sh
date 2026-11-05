@@ -2,10 +2,10 @@
 # One command for the midway experiment. Run from the repo root:
 #   bash run_midway.sh
 # Steps: check key, fix the prompt join in Method B, run tests,
-# run A and B on the 18 cancel tasks, then print the summary table.
+# run A and B on the 15 scored cancel tasks, then print the summary table.
 set -e
 
-TASKS="0 1 7 9 19 24 26 28 35 37 39 41 43 44 45 47 48 49"
+TASKS="0 1 7 19 24 26 28 35 41 43 44 45 47 48 49"
 MODEL="openai/gpt-6.1-sol"
 
 if [ -z "$OPENROUTER_API_KEY" ]; then

@@ -1,12 +1,14 @@
 import math
 import re
 from collections import defaultdict
+from typing import Optional
 
 import pandas as pd
 from loguru import logger
 from pydantic import BaseModel
 
 from tau2.data_model.simulation import Results, TerminationReason
+from tau2.data_model.tasks import RewardType
 
 
 def is_successful(reward: float) -> bool:
@@ -21,6 +23,17 @@ class AgentMetrics(BaseModel):
     avg_reward: float
     pass_hat_ks: dict[int, float]
     avg_agent_cost: float
+
+    # Decision-reason metrics (reason judge vs golden labels)
+    avg_task_reward: Optional[float] = None  # task's own reward, before REASON
+    reason_in_reward: bool = False  # REASON gated the final reward
+    reason_judged: int = 0  # simulations the reason judge graded
+    reason_met: int = 0  # decision and reason correct, no incorrect claims
+    reason_decision_correct: int = 0
+    reason_reason_correct: int = 0
+    reason_skipped: int = 0  # reason scoring on, task unlabeled or excluded
+    avg_reason_partial: Optional[float] = None
+    reason_judge_cost: Optional[float] = None  # total USD across judged sims
 
     # Simulation counts
     total_simulations: int = 0
@@ -103,7 +116,28 @@ class AgentMetrics(BaseModel):
         }
         for k, v in self.pass_hat_ks.items():
             data[f"pass_hat_{k}"] = v
+        data.update(
+            {
+                "avg_task_reward": self.avg_task_reward,
+                "reason_in_reward": self.reason_in_reward,
+                "reason_judged": self.reason_judged,
+                "reason_met": self.reason_met,
+                "reason_accuracy": self.reason_accuracy,
+                "reason_decision_correct": self.reason_decision_correct,
+                "reason_reason_correct": self.reason_reason_correct,
+                "reason_skipped": self.reason_skipped,
+                "avg_reason_partial": self.avg_reason_partial,
+                "reason_judge_cost": self.reason_judge_cost,
+            }
+        )
         return data
+
+    @property
+    def reason_accuracy(self) -> Optional[float]:
+        """Share of judged simulations with correct decisions and reasons."""
+        if not self.reason_judged:
+            return None
+        return self.reason_met / self.reason_judged
 
 
 def pass_hat_k(num_trials: int, success_count: int, k: int) -> float:
@@ -239,6 +273,34 @@ def compute_metrics(results: Results) -> AgentMetrics:
             k = int(match.group(1))
             pass_hat_ks[k] = df_pass_hat_k[column].mean()
     avg_agent_cost = df.agent_cost.mean()
+    avg_task_reward = (
+        float(df.task_reward.mean()) if "task_reward" in df else float(avg_reward)
+    )
+
+    # Decision-reason metrics
+    reason_judged = reason_met = reason_decision_correct = 0
+    reason_reason_correct = reason_skipped = 0
+    reason_in_reward = False
+    reason_partials: list[float] = []
+    reason_costs: list[float] = []
+    for sim in evaluated_sims:
+        reward_info = sim.reward_info
+        if reward_info is None:
+            continue
+        check = reward_info.reason_check
+        if check is None:
+            if "skipped" in ((reward_info.info or {}).get("reason") or {}):
+                reason_skipped += 1
+            continue
+        reason_judged += 1
+        reason_met += check.met
+        reason_decision_correct += check.decision_correct
+        reason_reason_correct += check.reason_correct
+        reason_partials.append(check.partial_score)
+        if check.judge_cost is not None:
+            reason_costs.append(check.judge_cost)
+        if RewardType.REASON in (reward_info.reward_breakdown or {}):
+            reason_in_reward = True
 
     # Counts exclude infrastructure errors
     total_simulations = len(evaluated_sims)
@@ -431,6 +493,17 @@ def compute_metrics(results: Results) -> AgentMetrics:
         avg_reward=avg_reward,
         pass_hat_ks=pass_hat_ks,
         avg_agent_cost=avg_agent_cost,
+        avg_task_reward=avg_task_reward,
+        reason_in_reward=reason_in_reward,
+        reason_judged=reason_judged,
+        reason_met=reason_met,
+        reason_decision_correct=reason_decision_correct,
+        reason_reason_correct=reason_reason_correct,
+        reason_skipped=reason_skipped,
+        avg_reason_partial=(
+            sum(reason_partials) / len(reason_partials) if reason_partials else None
+        ),
+        reason_judge_cost=sum(reason_costs) if reason_costs else None,
         total_simulations=total_simulations,
         total_tasks=total_tasks,
         infra_error_count=infra_error_count,
@@ -470,6 +543,12 @@ def display_metrics(metrics: AgentMetrics) -> None:
     for k, pass_hat_k in metrics.pass_hat_ks.items():
         print(f"  k={k}: {pass_hat_k}")
     print(f"💰 Average agent cost: {metrics.avg_agent_cost}")
+    if metrics.reason_judged:
+        print(f"🧾 Task reward (before REASON): {metrics.avg_task_reward}")
+        print(
+            f"🧾 Decision explanations correct: {metrics.reason_met}/"
+            f"{metrics.reason_judged} ({metrics.reason_accuracy:.1%})"
+        )
 
 
 if __name__ == "__main__":

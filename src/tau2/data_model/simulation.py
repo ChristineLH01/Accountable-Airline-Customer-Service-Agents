@@ -29,6 +29,7 @@ from tau2.config import (
 )
 from tau2.data_model.message import Message
 from tau2.data_model.persona import PersonaConfig
+from tau2.data_model.reason_scoring import ReasonCheck, ReasonScoring, ReasonScoringMode
 from tau2.data_model.semantic_communication import (
     CommunicateScorer,
     CommunicateScoring,
@@ -138,6 +139,12 @@ class RunConfig(BaseModel):
         default_factory=CommunicateScoring,
         description="Communicate-info scorer: the pinned semantic LLM judge by default; "
         "substring matching only when explicitly selected.",
+    )
+    reason_scoring: ReasonScoring = Field(
+        default_factory=ReasonScoring,
+        description="Decision-reason scorer: by default the LLM judge grades the "
+        "agent's decisions and reasons against the golden labels and REASON gates "
+        "the final reward ('gate'); 'report' records it only; 'off' skips it.",
     )
 
     # ---- Execution parameters ----
@@ -609,6 +616,23 @@ class RewardInfo(BaseModel):
             default=None,
         ),
     ]
+    reason_check: Annotated[
+        Optional[ReasonCheck],
+        Field(
+            description="Decision-reason check against the task's golden label; null "
+            "when reason scoring is off or the task has no scored label.",
+            default=None,
+        ),
+    ]
+    task_reward: Annotated[
+        Optional[float],
+        Field(
+            description="Reward from the task's reward_basis alone (the original "
+            "tau-bench reward, e.g. DB x COMMUNICATE), before REASON is applied. Null "
+            "when reason scoring did not run, in which case it equals `reward`.",
+            default=None,
+        ),
+    ]
     reward_basis: Annotated[
         Optional[list[RewardType]],
         Field(
@@ -737,6 +761,16 @@ class Info(BaseModel):
         description="Communicate-info scorer used by this run; null only in results "
         "recorded before it was explicit (substring matching).",
     )
+    reason_scoring: Optional[ReasonScoring] = Field(
+        default=None,
+        description="Decision-reason scorer used by this run; null in results "
+        "recorded before reason scoring existed (not scored).",
+    )
+    golden_labels_sha256: Optional[str] = Field(
+        default=None,
+        description="SHA-256 of the golden-label file the reason judge graded "
+        "against; null when reason scoring was off.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -762,6 +796,11 @@ class Info(BaseModel):
         return self.communicate_scoring or CommunicateScoring(
             scorer=CommunicateScorer.SUBSTRING
         )
+
+    @property
+    def effective_reason_scoring(self) -> ReasonScoring:
+        """The recorded reason scorer; unrecorded results were not reason-scored."""
+        return self.reason_scoring or ReasonScoring(mode=ReasonScoringMode.OFF)
 
 
 class TerminationReason(str, Enum):
@@ -1138,12 +1177,32 @@ class Results(BaseModel):
 
     @staticmethod
     def _sim_to_row(sim: "SimulationRun", info: "Info") -> dict:
+        reward_info = sim.reward_info
+        reason_check = reward_info.reason_check if reward_info else None
         return {
             "simulation_id": sim.id,
             "task_id": sim.task_id,
             "trial": sim.trial,
             "seed": sim.seed,
-            "reward": sim.reward_info.reward if sim.reward_info else None,
+            "reward": reward_info.reward if reward_info else None,
+            # The task's own reward (tau-bench DB x COMMUNICATE), before REASON.
+            "task_reward": (
+                None
+                if reward_info is None
+                else reward_info.task_reward
+                if reward_info.task_reward is not None
+                else reward_info.reward
+            ),
+            "reason_reward": reason_check.reward if reason_check else None,
+            "reason_decision_correct": (
+                reason_check.decision_correct if reason_check else None
+            ),
+            "reason_reason_correct": (
+                reason_check.reason_correct if reason_check else None
+            ),
+            "reason_partial_score": (
+                reason_check.partial_score if reason_check else None
+            ),
             "agent_cost": sim.agent_cost,
             "user_cost": sim.user_cost,
             "termination_reason": sim.termination_reason,

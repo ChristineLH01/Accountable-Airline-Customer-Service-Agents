@@ -394,6 +394,30 @@ class ConsoleDisplay:
                         f"- {i}: {check.info} {'✅' if check.met else '❌'}\n"
                     )
 
+            # Add the decision-reason check if present
+            reason_check = simulation.reward_info.reason_check
+            if reason_check:
+                sim_info.append("\nReason Check:", style=c.system_role)
+                sim_info.append(
+                    f"{'✅' if reason_check.met else '❌'} decision "
+                    f"{'✅' if reason_check.decision_correct else '❌'}, reason "
+                    f"{'✅' if reason_check.reason_correct else '❌'}, partial "
+                    f"{reason_check.partial_score:.2f} "
+                    f"({reason_check.judge_model}, {reason_check.prompt_version})\n"
+                )
+                for i, request in enumerate(reason_check.requests):
+                    sim_info.append(
+                        f"- {i}: {request.request} | decision "
+                        f"{'✅' if request.decision_correct else '❌'} reason "
+                        f"{'✅' if request.reason_correct else '❌'}\n"
+                        f"\tgolden: {request.golden_outcome}\n"
+                        f"\tagent: {request.agent_outcome}\n"
+                        f"\t{request.reasoning}\n"
+                    )
+                for claim in reason_check.incorrect_claims:
+                    sim_info.append(f"- incorrect claim: {claim}\n")
+                sim_info.append(f"\t{reason_check.justification}\n")
+
             # Add NL assertions if present
             if simulation.reward_info.nl_assertions:
                 sim_info.append("\nNL Assertions:\n", style=c.system_role)
@@ -765,7 +789,50 @@ class ConsoleDisplay:
             else "n/a"
         )
         table.add_row("💰 Avg Cost/Conversation", cost_str)
+        if metrics.reason_in_reward and metrics.avg_task_reward is not None:
+            table.add_row(
+                "   Task Reward (before REASON)", f"{metrics.avg_task_reward:.4f}"
+            )
         table.add_row("", "")
+
+        # Decision-reason metrics
+        if metrics.reason_judged or metrics.reason_skipped:
+            table.add_row("[cyan]═══ Decision Explanations ═══[/]", "")
+            judged = metrics.reason_judged
+            if judged:
+
+                def _share(count: int) -> str:
+                    pct = count / judged * 100
+                    color = "green" if pct >= 80 else ("yellow" if pct >= 50 else "red")
+                    return f"[{color}]{count}/{judged}[/] ({pct:.1f}%)"
+
+                table.add_row("🧾 Decision + Reason", _share(metrics.reason_met))
+                table.add_row(
+                    "   Decision Correct", _share(metrics.reason_decision_correct)
+                )
+                table.add_row(
+                    "   Reason Correct", _share(metrics.reason_reason_correct)
+                )
+                if metrics.avg_reason_partial is not None:
+                    table.add_row(
+                        "   Avg Partial Score", f"{metrics.avg_reason_partial:.3f}"
+                    )
+                table.add_row(
+                    "   In Final Reward",
+                    "yes (REASON gates the reward)"
+                    if metrics.reason_in_reward
+                    else "no (report only)",
+                )
+                if metrics.reason_judge_cost is not None:
+                    table.add_row(
+                        "   Judge Cost (total)", f"${metrics.reason_judge_cost:.4f}"
+                    )
+            if metrics.reason_skipped:
+                table.add_row(
+                    "   Skipped",
+                    f"[dim]{metrics.reason_skipped} (no scored golden label)[/]",
+                )
+            table.add_row("", "")
 
         # Action metrics
         table.add_row("[cyan]═══ Action Metrics ═══[/]", "")
@@ -1138,6 +1205,30 @@ class MarkdownDisplay:
                     output.append(
                         f"- {i}: {check.info} {'✅' if check.met else '❌'} {check.justification}"
                     )
+
+            # Add the decision-reason check if present
+            reason_check = sim.reward_info.reason_check
+            if reason_check:
+                output.append("\n**Reason Check**")
+                output.append(
+                    f"- Overall: {'✅' if reason_check.met else '❌'} "
+                    f"(decision {'✅' if reason_check.decision_correct else '❌'}, "
+                    f"reason {'✅' if reason_check.reason_correct else '❌'}, "
+                    f"partial {reason_check.partial_score:.2f}; "
+                    f"{reason_check.judge_model}, {reason_check.prompt_version})"
+                )
+                output.append(f"- Golden decision: {reason_check.golden_decision}")
+                output.append(f"- Golden reason: {reason_check.golden_reason}")
+                for i, request in enumerate(reason_check.requests):
+                    output.append(
+                        f"- {i}: {request.request}: decision "
+                        f"{'✅' if request.decision_correct else '❌'}, reason "
+                        f"{'✅' if request.reason_correct else '❌'}. "
+                        f"Agent: {request.agent_outcome}. {request.reasoning}"
+                    )
+                for claim in reason_check.incorrect_claims:
+                    output.append(f"- Incorrect claim: {claim}")
+                output.append(f"- Judge: {reason_check.justification}")
 
             # Add NL assertions if present
             if sim.reward_info.nl_assertions:

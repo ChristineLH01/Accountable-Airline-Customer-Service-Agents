@@ -70,7 +70,7 @@ src/tau2/
 ├── orchestrator/    # Orchestrator: turn-based agent/user/environment loop
 ├── environment/     # Environment, ToolKitBase, Tool, DB base classes
 ├── domains/airline/ # data model, tools, environment, task loading
-├── evaluator/       # env (DB), action, communicate, NL-assertion evaluators; reviewers
+├── evaluator/       # env (DB), action, communicate, decision-reason, NL-assertion evaluators; reviewers
 ├── metrics/         # pass^k and run metrics
 ├── runner/          # simulation.py (layer 1), build.py (layer 2), batch.py (layer 3), checkpoint, progress
 ├── data_model/      # messages, tasks, RunConfig, SimulationRun, Results
@@ -83,7 +83,7 @@ src/tau2/
 
 Other top-level directories:
 - `data/tau2-airline/` — `db.json`, `policy.md`, `tasks.json` (50 tasks),
-  `split_tasks.json` (`base`/`train`/`test`), `user_personas.json`,
+  `split_tasks.json` (`base`/`train`/`test`/`scored`), `user_personas.json`,
   `mannual_label.json` (answer key of golden decisions and reasons; see
   Evaluation)
 - `tests/` — pytest suite; `tests/mock_domain/` is a tiny test-only domain
@@ -137,14 +137,22 @@ across runs with identical prompts.
 `evaluate_simulation()` (`evaluator/evaluator.py`) multiplies the components in
 the task's `reward_basis` (airline: `DB` and `COMMUNICATE`). `COMMUNICATE` uses
 a semantic LLM judge by default (`--communicate-scorer substring` for the
-original substring match). Reviews (`--auto-review`, `tau2 review`) and
+original substring match). The run then adds `REASON` (`evaluator_reason.py`):
+an LLM judge grades the decision and reason the agent told the customer against
+the golden labels below. `--reason-scoring gate` (default) multiplies it into
+the reward; `report` records it only; `off` skips it. `reward_info.task_reward`
+keeps the reward without `REASON`, so runs stay comparable with tau-bench. The
+judge prompt is pinned by a digest in `tests/test_evaluator/test_reason_judge.py`;
+change it only with a new `ReasonJudgeSettings.prompt_version`. Reviews (`--auto-review`, `tau2 review`) and
 authentication classification are diagnostics and never change the reward.
 
 The answer key for the agent's decision explanations is
 `data/tau2-airline/mannual_label.json`: one entry per task with the final
-`golden_decision` and `golden_reason`. Until the team reaches consensus, each
-entry also holds the three annotators' `golden_decision_1/2/3` and
-`golden_reason_1/2/3`. Load the final labels with
+`golden_decision` and `golden_reason`, set for all 50 tasks from the three
+annotators' labels (`golden_decision_1/2/3`, `golden_reason_1/2/3`, still kept
+in each entry). `docs/golden_labels.md` records how they were set. Tasks 9, 37
+and 39 carry `excluded_from_scoring: true` with an `exclusion_reason`; leave them
+out of scoring (the `scored` split already does). Load the final labels with
 `tau2.domains.airline.golden_reasons.load_golden_reasons()`, which ignores the
 annotator fields and returns `None` for labels that are still empty.
 
@@ -189,5 +197,8 @@ test: add airline policy tests
   usable from the CLI.
 - **Task splits**: `base` (all 50 tasks) is the default for evaluation;
   `train` (30) / `test` (20) are for experiments that need held-out tasks.
+  `scored` (47) leaves out tasks 9, 37 and 39, whose labels or answer keys are
+  disputed (`excluded_from_scoring` in `mannual_label.json`; see
+  `docs/golden_labels.md`). Use it for evaluation runs until those are settled.
 - **Pre-commit hook**: runs `make check-all`. Fix any issues before committing.
 - **No CI**: there are no GitHub Actions workflows; run tests locally.

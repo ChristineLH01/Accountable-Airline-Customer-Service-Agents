@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Optional
 
+from tau2.data_model.reason_scoring import ReasonScoring
 from tau2.data_model.semantic_communication import CommunicateScoring
 from tau2.data_model.simulation import RewardInfo, SimulationRun, TerminationReason
 from tau2.data_model.tasks import RewardType, Task
@@ -9,6 +10,7 @@ from tau2.evaluator.evaluator_action import ActionEvaluator
 from tau2.evaluator.evaluator_communicate import CommunicateEvaluator
 from tau2.evaluator.evaluator_env import EnvironmentEvaluator
 from tau2.evaluator.evaluator_nl_assertions import NLAssertionsEvaluator
+from tau2.evaluator.evaluator_reason import ReasonEvaluator
 from tau2.registry import registry
 
 
@@ -76,6 +78,51 @@ class EvaluationType(str, Enum):
     ALL_WITH_NL_ASSERTIONS_IGNORE_BASIS = "all_with_nl_assertions_ignore_basis"
 
 
+# Evaluation types that combine components into a final reward; reason scoring
+# (when enabled) is applied on top of these only.
+_COMBINED_EVALUATION_TYPES = {
+    EvaluationType.ALL,
+    EvaluationType.ALL_WITH_NL_ASSERTIONS,
+    EvaluationType.ALL_IGNORE_BASIS,
+    EvaluationType.ALL_WITH_NL_ASSERTIONS_IGNORE_BASIS,
+}
+
+
+def apply_reason_scoring(
+    reward_info: RewardInfo,
+    *,
+    simulation: SimulationRun,
+    task: Task,
+    domain: str,
+    reason_scoring: ReasonScoring,
+) -> RewardInfo:
+    """Judge the agent's decision explanations and, when gating, fold REASON in.
+
+    `task_reward` keeps the reward from the task's own reward_basis (the original
+    tau-bench reward), so runs stay comparable with and without reason scoring.
+    """
+    check, info = ReasonEvaluator.evaluate(
+        task,
+        simulation.messages,
+        domain=domain,
+        scoring=reason_scoring,
+    )
+    reward_info.task_reward = reward_info.reward
+    reward_info.reason_check = check
+    reward_info.info = {**(reward_info.info or {}), "reason": info}
+    if check is not None and reason_scoring.gates_reward:
+        reward_info.reward = reward_info.reward * check.reward
+        reward_info.reward_breakdown = {
+            **(reward_info.reward_breakdown or {}),
+            RewardType.REASON: check.reward,
+        }
+        reward_info.reward_basis = [
+            *(reward_info.reward_basis or []),
+            RewardType.REASON,
+        ]
+    return reward_info
+
+
 def evaluate_simulation(
     simulation: SimulationRun,
     task: Task,
@@ -85,6 +132,7 @@ def evaluate_simulation(
     strict_replay: bool = True,
     *,
     communicate_scoring: CommunicateScoring,
+    reason_scoring: Optional[ReasonScoring] = None,
 ) -> RewardInfo:
     """
     Evaluate the simulation based on the evaluation type.
@@ -102,6 +150,9 @@ def evaluate_simulation(
               current tool code do not abort the replay.
         communicate_scoring: How `communicate_info` is scored (semantic judge
               or substring match).
+        reason_scoring: How the agent's decision explanations are scored
+              against the golden labels. None (or mode off) skips it. Applied
+              only to the combined evaluation types (ALL and its variants).
 
     Returns:
         RewardInfo with the evaluation results.
@@ -338,4 +389,16 @@ def evaluate_simulation(
         )
     else:
         raise ValueError(f"Unknown evaluation type: {evaluation_type}")
+    if (
+        reason_scoring is not None
+        and reason_scoring.enabled
+        and evaluation_type in _COMBINED_EVALUATION_TYPES
+    ):
+        reward_info = apply_reason_scoring(
+            reward_info,
+            simulation=simulation,
+            task=task,
+            domain=domain,
+            reason_scoring=reason_scoring,
+        )
     return reward_info

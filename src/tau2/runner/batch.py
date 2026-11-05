@@ -268,6 +268,7 @@ def run_single_task(
             orchestrator,
             evaluation_type=evaluation_type,
             communicate_scoring=config.communicate_scoring,
+            reason_scoring=config.reason_scoring,
         )
 
         # Side effects
