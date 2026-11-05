@@ -13,10 +13,6 @@ compensation. The agent must follow a written airline policy and act on a
 flight database through tools. Each conversation is then scored against the
 task's expected outcome.
 
-<div align="center">
-<img src="figs/traj.png" width="95%" alt="Trajectory">
-</div>
-
 ## What this repository contains
 
 This repository is a trimmed copy of tau2-bench with adaptions, focused on the
@@ -25,7 +21,7 @@ airline text task in English. It contains:
 | Component | Where | Notes |
 |---|---|---|
 | Airline domain | `src/tau2/domains/airline/`, `data/tau2-airline/` | Flight database, agent policy, 14 tools, 50 tasks with `base` / `train` (30) / `test` (20) splits |
-| Agents | `src/tau2/agent/` | `llm_agent` (the standard tool-calling LLM agent) and `llm_agent_gt` (an oracle agent that is shown the expected actions) |
+| Agents | `src/tau2/agent/` | `llm_agent` (the standard tool-calling LLM agent, method A), `gated_cancel_agent` (method B: `llm_agent` plus a cancellation checklist and gate, see [below](#method-b-cancellation-checklist-and-gate)) and `llm_agent_gt` (an oracle agent that is shown the expected actions) |
 | User simulator | `src/tau2/user/` | LLM customer that follows the task scenario, with one of two reviewed English caller personas |
 | Orchestrator | `src/tau2/orchestrator/` | Turn-based loop between agent, user and environment |
 | Evaluator | `src/tau2/evaluator/` | Database end-state check, communicated-information judge, action and NL-assertion checks; optional LLM conversation review |
@@ -149,6 +145,44 @@ score 0. pass^k is the probability that all k trials of a task succeed. See
 | `tau2 convert-results <path>` | Convert results between one JSON file and a directory of files |
 | `make env-cli` | Chat with the airline environment directly to try its tools |
 
+## Method B: cancellation checklist and gate
+
+`gated_cancel_agent` is the baseline `llm_agent` (method A) with two additions,
+for cancellations only:
+
+- **A checklist tool, `check_eligibility`.** Before cancelling, the agent fills
+  in the policy conditions from tool results: the cancel reason, whether a
+  segment was already flown, whether the booking was made within 24 hours,
+  whether the airline cancelled the flight, whether the cabin is business, and
+  whether the reservation has travel insurance. Fixed rules in
+  `src/tau2/agent/eligibility.py`, not the LLM, turn these into a decision:
+  `ALLOW`, `DENY`, `TRANSFER` or `NEED_INFO`. An unknown cancel reason holds
+  the decision back only when it can change it, that is when the reservation
+  has insurance and no other condition is met.
+- **A gate on `cancel_reservation`.** If the latest checklist for a reservation
+  is not `ALLOW`, the cancellation never reaches the environment. The agent
+  gets a `BLOCKED` message instead and has to answer the customer.
+
+The checklist tool is handled inside the agent, so the environment, the policy,
+the tasks and the scoring are the same as for method A. The checklist rules
+are tested against the 31 cancellation rows of the team's policy checklist
+(`dataset/checklist_yt.xlsx`, Cancel sheet).
+
+Compare A and B on the 18 tasks that involve a cancellation:
+
+```bash
+uv run pytest tests/test_method_b     # no API key needed
+bash run_midway.sh                    # runs A and B, then prints the summary
+```
+
+`run_midway.sh` runs both agents with `openai/gpt-6.1-sol` as the agent and
+the user simulator, one trial each, saving to `data/simulations/midway_a` and
+`midway_b`. `summarize_runs.py` then prints, per task, the reward, the
+`cancel_reservation` calls, the checklist decisions and the blocked calls, and
+saves them as a CSV in `data/simulations/`. It reads the checklist calls from
+the `--verbose-logs` debug files, so use that flag for runs you summarize. See
+[docs/method_b.md](docs/method_b.md) for the individual `tau2 run` commands.
+
 ## Building your own agent
 
 An agent subclasses `HalfDuplexAgent` and implements `get_init_state()` and
@@ -172,8 +206,9 @@ orchestrator. The [agent guide](src/tau2/agent/README.md) and
 data/tau2-airline/           db.json, policy.md, tasks.json, split_tasks.json, user_personas.json,
                              mannual_label.json (golden decisions and reasons)
 data/simulations/            run outputs (git-ignored)
+dataset/checklist_yt.xlsx    policy checklist per task and request type (Cancel, Compensation, Baggage, ...)
 src/tau2/
-├── agent/                   LLMAgent, LLMGTAgent, HalfDuplexAgent base
+├── agent/                   LLMAgent, LLMGTAgent, GatedCancelAgent and its checklist rules, HalfDuplexAgent base
 ├── user/                    UserSimulator, guideline scaffold, English caller personas
 ├── orchestrator/            turn-based Orchestrator
 ├── environment/             Environment, toolkit and DB base classes
@@ -185,8 +220,10 @@ src/tau2/
 ├── scripts/                 view, evaluate-trajs, review, domain doc, check-data
 ├── cli.py, config.py, registry.py, run.py
 examples/agents/             custom agent examples
-tests/                       pytest suite (plus a tiny test-only mock domain)
-docs/                        getting started, evaluation, simulations API, CLI reference
+tests/                       pytest suite (plus a tiny test-only mock domain); method B in tests/test_method_b/
+docs/                        getting started, evaluation, simulations API, CLI reference, method B
+run_midway.sh                method A vs method B on the cancellation tasks
+summarize_runs.py            per-task summary of one or more runs
 ```
 
 ## Development
