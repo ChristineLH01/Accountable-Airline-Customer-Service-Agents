@@ -3,6 +3,10 @@
 Usage, from the repo root:
     uv run python summarize_runs.py smoke_b_task19
     uv run python summarize_runs.py my_run_b my_run_a      # several runs
+    uv run python summarize_runs.py passk_a passk_b,passk_b_retry
+        # a comma joins folders into one run, for example a run and its retry
+
+At the end it lists the trials that did not finish, so they can be rerun.
 
 The run must have been made with --verbose-logs, because the checklist calls
 of Method B are only kept in the llm_debug files, not in results.json.
@@ -15,6 +19,7 @@ import json
 import os
 import re
 import sys
+from math import comb
 
 SIM_ROOT = os.path.join("data", "simulations")
 
@@ -103,10 +108,62 @@ def summarize(run_name):
     return rows
 
 
+def pass_hat_k(n, c, k):
+    """tau-bench pass^k for one task: chance that k of the n trials all succeed."""
+    if n < k:
+        return None
+    return comb(c, k) / comb(n, k)
+
+
+def print_pass_k(rows):
+    """Average reward and pass^k per run. Unfinished trials are left out."""
+    print("\nrun | tasks | trials | avg_reward | pass^k for k = 1..trials")
+    runs = {}
+    for r in rows:
+        if r["reward"] is None:
+            continue
+        runs.setdefault(r["run"], {}).setdefault(r["task_id"], []).append(
+            float(r["reward"]) >= 1.0
+        )
+    for run, tasks in runs.items():
+        n_min = min(len(v) for v in tasks.values())
+        rewards = [x for v in tasks.values() for x in v]
+        scores = []
+        for k in range(1, n_min + 1):
+            vals = [pass_hat_k(len(v), sum(v), k) for v in tasks.values()]
+            scores.append(f"pass^{k}={sum(vals) / len(vals):.3f}")
+        print(
+            f"{run} | {len(tasks)} | {n_min} | {sum(rewards) / len(rewards):.3f} | "
+            + " ".join(scores)
+        )
+
+
+def print_missing(rows):
+    """List tasks with fewer finished trials than the run's largest trial count."""
+    runs = {}
+    for r in rows:
+        tasks = runs.setdefault(r["run"], {})
+        tasks.setdefault(r["task_id"], 0)
+        if r["reward"] is not None:
+            tasks[r["task_id"]] += 1
+    print("\nUnfinished trials (task: how many to rerun)")
+    for run, tasks in runs.items():
+        target = max(tasks.values()) if tasks else 0
+        gaps = {t: target - n for t, n in tasks.items() if n < target}
+        if not gaps:
+            print(f"{run}: none")
+            continue
+        print(f"{run}: " + ", ".join(f"{t}: {g}" for t, g in gaps.items()))
+
+
 def main(names):
     all_rows = []
-    for name in names:
-        all_rows.extend(summarize(name))
+    for group in names:
+        parts = group.split(",")
+        for name in parts:
+            for row in summarize(name):
+                row["run"] = parts[0]
+                all_rows.append(row)
 
     cols = [
         "run",
@@ -122,6 +179,9 @@ def main(names):
     print(" | ".join(cols))
     for r in all_rows:
         print(" | ".join(str(r[c]) for c in cols))
+
+    print_pass_k(all_rows)
+    print_missing(all_rows)
 
     out = re.sub(r"[^A-Za-z0-9_.-]", "_", "_".join(names)) + "_summary.csv"
     out_path = os.path.join(SIM_ROOT, out)

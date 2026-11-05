@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 # One command for the midway experiment. Run from the repo root:
 #   bash run_midway.sh
+# Default: 3 trials per task, saved as passk_a and passk_b.
+# Change with: TRIALS=1 A_NAME=x B_NAME=y bash run_midway.sh
 # Steps: check key, fix the prompt join in Method B, run tests,
 # run A and B on the 18 cancel tasks, then print the summary table.
 set -e
 
 TASKS="0 1 7 9 19 24 26 28 35 37 39 41 43 44 45 47 48 49"
 MODEL="openai/gpt-6.1-sol"
+TRIALS="${TRIALS:-3}"
+A_NAME="${A_NAME:-passk_a}"
+B_NAME="${B_NAME:-passk_b}"
 
 if [ -z "$OPENROUTER_API_KEY" ]; then
   echo "OPENROUTER_API_KEY is not set. Run: export OPENROUTER_API_KEY=your_key"
@@ -33,13 +38,13 @@ uv run pytest tests/test_method_b -q
 
 echo "== 3. Run A (llm_agent) =="
 uv run tau2 run --agent llm_agent --agent-llm "$MODEL" --user-llm "$MODEL" \
-  --task-ids $TASKS --num-trials 1 --max-concurrency 1 --retry-delay 60 --max-retries 5 \
-  --save-to midway_a --verbose-logs --auto-resume
+  --task-ids $TASKS --num-trials "$TRIALS" --max-concurrency 1 --retry-delay 60 --max-retries 5 \
+  --save-to "$A_NAME" --verbose-logs --auto-resume
 
 echo "== 4. Run B (gated_cancel_agent) =="
 uv run tau2 run --agent gated_cancel_agent --agent-llm "$MODEL" --user-llm "$MODEL" \
-  --task-ids $TASKS --num-trials 1 --max-concurrency 1 --retry-delay 60 --max-retries 5 \
-  --save-to midway_b --verbose-logs --auto-resume
+  --task-ids $TASKS --num-trials "$TRIALS" --max-concurrency 1 --retry-delay 60 --max-retries 5 \
+  --save-to "$B_NAME" --verbose-logs --auto-resume
 
 echo "== 5. Summary =="
-uv run python summarize_runs.py midway_a midway_b
+uv run python summarize_runs.py "$A_NAME" "$B_NAME"
