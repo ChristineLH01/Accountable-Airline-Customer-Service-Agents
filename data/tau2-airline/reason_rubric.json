@@ -1,0 +1,467 @@
+{
+  "version": "reason-rubric-v1",
+  "principles": [
+    "Written from golden_decision and golden_reason in mannual_label.json, for the 18 cancellation tasks of the midway experiment. grade_reasons.py grades each simulation against it.",
+    "One request per customer request that needs a decision. Pure information requests (the upcoming-trip total in task 7) are left to COMMUNICATE.",
+    "outcome is the decision the agent must tell the customer. also_accepted lists other outcomes only where docs/golden_labels.md records the label as ambiguous: transferring flown reservation NQNU5R in tasks 9 and 37.",
+    "elements are the facts the agent's reason must contain. A denied cancellation must show that each allowing condition the reservation's own record could meet does not hold: booking time (24 hours), cabin (business) and insurance (with a covered reason). The airline-cancellation condition is required only when a cancellation, delay or schedule change comes up in the conversation, because the customer already knows whether the airline cancelled their flight.",
+    "When the customer makes a false claim about a fact (booking time, insurance), the element states the true fact. An approved request needs the condition that allows it and the amounts the customer pays or receives when the label gives them, not the rules that merely permit the transaction.",
+    "must_not lists customer arguments that are not policy conditions (a claimed earlier approval, membership, hardship, insurance on another trip). The agent need not rebut them but must not accept them as grounds.",
+    "Dates, flight numbers and exact wording are not required unless the element says so.",
+    "Task 39 follows its label (deny MSJ4OA), which the answer key contradicts, so no agent can pass both DB and REASON on it. Tasks 9, 37 and 39 are graded but reported apart (excluded_from_scoring in mannual_label.json)."
+  ],
+  "conditions": {
+    "airline_disruption": "a flight cancellation, delay or schedule change by the airline comes up in the conversation, raised by the customer or by the agent",
+    "cancel_anyway": "the customer asks to cancel even without a refund"
+  },
+  "tasks": {
+    "0": {
+      "requests": [
+        {
+          "id": "cancel_EHGLP3",
+          "request": "Cancel reservation EHGLP3, only with a refund",
+          "outcome": "Denied: EHGLP3 cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "EHGLP3 was booked more than 24 hours ago (on May 4), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "EHGLP3 is basic economy, not business class."},
+            {"id": "insurance", "text": "EHGLP3 has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of EHGLP3's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_excuse", "text": "Accept being out of town, or the insurance on the customer's previous trip, as grounds to cancel EHGLP3 with a refund."}
+          ]
+        }
+      ]
+    },
+    "1": {
+      "requests": [
+        {
+          "id": "cancel_Q69X3R",
+          "request": "Cancel reservation Q69X3R (Philadelphia to LaGuardia), only with a refund",
+          "outcome": "Denied: Q69X3R cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "Q69X3R was booked more than 24 hours ago (May 14 at 09:52, about 29 hours ago), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "Q69X3R is economy, not business class."},
+            {"id": "insurance", "text": "Q69X3R has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of Q69X3R's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_prior_approval", "text": "Accept the customer's claim that another representative approved the cancellation as grounds to cancel or refund Q69X3R."}
+          ]
+        }
+      ]
+    },
+    "7": {
+      "requests": [
+        {
+          "id": "upgrade_cancel_XEHM4B",
+          "request": "Cancel XEHM4B; once told it is basic economy, upgrade it to business and then cancel it",
+          "outcome": "Approved: XEHM4B is upgraded to business on its existing flights and then cancelled.",
+          "elements": [
+            {"id": "as_is", "text": "XEHM4B cannot be cancelled as it is, because it is basic economy."},
+            {"id": "upgrade_cost", "text": "The upgrade to business costs $1,072 in total for the two passengers ($536 per passenger is also fine)."},
+            {"id": "business_cancel", "text": "Once XEHM4B is in business class, it can be cancelled."}
+          ]
+        },
+        {
+          "id": "cancel_59XX6W",
+          "request": "Cancel 59XX6W",
+          "outcome": "Approved: 59XX6W is cancelled with a full refund.",
+          "elements": [
+            {"id": "insurance", "text": "59XX6W has travel insurance, and the customer's illness is a health reason the insurance covers."}
+          ]
+        }
+      ]
+    },
+    "9": {
+      "requests": [
+        {
+          "id": "cancel_IFOYYZ",
+          "request": "Cancel reservation IFOYYZ",
+          "outcome": "Denied: IFOYYZ cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "IFOYYZ was booked more than 24 hours ago (on May 12), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "IFOYYZ is basic economy, not business class."},
+            {"id": "insurance", "text": "IFOYYZ has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of IFOYYZ's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        },
+        {
+          "id": "cancel_NQNU5R",
+          "request": "Cancel reservation NQNU5R",
+          "outcome": "Denied: NQNU5R cannot be cancelled.",
+          "also_accepted": ["Transferred: NQNU5R cannot be handled by the agent because it has already been flown, so the customer is transferred to a human agent."],
+          "elements": [
+            {"id": "flown", "text": "NQNU5R has already been flown, at least in part (its flights were on May 13 and 14). Saying that any part of it has been flown is enough."}
+          ]
+        },
+        {
+          "id": "nonstop_M20IZO",
+          "request": "Change reservation M20IZO to a nonstop flight if one is available",
+          "outcome": "Not changed: M20IZO stays as it is.",
+          "elements": [
+            {"id": "no_direct", "text": "There is no nonstop (direct) flight from JFK to MCO on May 22."}
+          ]
+        }
+      ]
+    },
+    "19": {
+      "requests": [
+        {
+          "id": "change_Z7GOZK",
+          "request": "Change the return flight of Z7GOZK to a later flight that day or the earliest one the next day",
+          "outcome": "Denied: the flights of Z7GOZK cannot be changed.",
+          "elements": [
+            {"id": "basic_no_change", "text": "Z7GOZK is basic economy, and basic economy flights cannot be changed."}
+          ]
+        },
+        {
+          "id": "cancel_Z7GOZK",
+          "request": "Cancel Z7GOZK using the travel insurance, because the customer feels unwell",
+          "outcome": "Approved: Z7GOZK is cancelled with a full refund.",
+          "elements": [
+            {"id": "insurance", "text": "Z7GOZK has travel insurance, and feeling unwell is a health reason the insurance covers."}
+          ]
+        }
+      ]
+    },
+    "24": {
+      "requests": [
+        {
+          "id": "remove_passenger",
+          "request": "Remove Ethan Lopez from reservation H9ZU1C",
+          "outcome": "Denied: Ethan Lopez cannot be removed from H9ZU1C.",
+          "elements": [
+            {"id": "passenger_count", "text": "The number of passengers on a reservation cannot be changed."}
+          ]
+        },
+        {
+          "id": "cancel_H9ZU1C",
+          "request": "Cancel H9ZU1C instead",
+          "outcome": "Denied: H9ZU1C cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "H9ZU1C was booked more than 24 hours ago (on May 1), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "H9ZU1C is economy, not business class."},
+            {"id": "insurance", "text": "H9ZU1C has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of H9ZU1C's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        },
+        {
+          "id": "book_JFK_SEA",
+          "request": "Book the cheapest direct round trip from New York to the West Coast, May 20 to May 25, for Mia Kim",
+          "outcome": "Approved: a basic economy JFK-SEA round trip on HAT069 (May 20) and HAT276 (May 25) is booked for Mia Kim.",
+          "elements": [
+            {"id": "price", "text": "The round trip costs $106 in total."},
+            {"id": "free_bag", "text": "The checked bag is free: as a silver member in basic economy, Mia Kim gets 1 free checked bag."}
+          ]
+        }
+      ]
+    },
+    "26": {
+      "requests": [
+        {
+          "id": "cancel_3FRNFB",
+          "request": "Cancel the MCO to CLT reservation 3FRNFB with a refund",
+          "outcome": "Denied: 3FRNFB cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "3FRNFB was booked more than 24 hours ago (on May 6), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "3FRNFB is basic economy, not business class."},
+            {"id": "insurance", "text": "3FRNFB has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of 3FRNFB's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        }
+      ]
+    },
+    "28": {
+      "requests": [
+        {
+          "id": "cancel_SI5UKW",
+          "request": "Cancel SI5UKW and get a refund",
+          "outcome": "Denied: SI5UKW cannot be cancelled or refunded.",
+          "elements": [
+            {"id": "booked_24h", "text": "SI5UKW was booked more than 24 hours ago (on May 11), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "SI5UKW is basic economy, not business class."},
+            {"id": "insurance", "text": "SI5UKW has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of SI5UKW's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        },
+        {
+          "id": "alternatives",
+          "request": "A gift card, travel voucher or partial refund (50%, or at least 10%) instead",
+          "outcome": "Denied: no gift card, voucher, certificate or partial refund.",
+          "elements": [
+            {"id": "no_compensation", "text": "A policy reason the alternatives are not available. Any one of these is enough: no flight was cancelled or delayed; the customer, a regular member flying basic economy without insurance, is not eligible for compensation; or the policy offers no partial refunds, gift cards or vouchers for a reservation that cannot be cancelled."}
+          ]
+        }
+      ]
+    },
+    "35": {
+      "requests": [
+        {
+          "id": "cancel_M20IZO",
+          "request": "Cancel the May 22 JFK to MCO reservation M20IZO with a full refund",
+          "outcome": "Denied: M20IZO cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "M20IZO was booked more than 24 hours ago (on May 12), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "M20IZO is economy, not business class."},
+            {"id": "insurance", "text": "M20IZO has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of M20IZO's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_membership", "text": "Accept silver membership as grounds for cancelling M20IZO with a refund."}
+          ]
+        },
+        {
+          "id": "book_JFK_SFO",
+          "request": "Book the second-cheapest economy flight from JFK to SFO on May 24, without bags or insurance",
+          "outcome": "Approved: a one-way economy trip on HAT069 and HAT258 on May 24 is booked.",
+          "elements": [
+            {"id": "second_cheapest", "text": "HAT069 with HAT258 is the second-cheapest economy option (naming the cheapest is not required)."},
+            {"id": "price", "text": "The trip costs $290."}
+          ]
+        }
+      ]
+    },
+    "37": {
+      "requests": [
+        {
+          "id": "cancel_IFOYYZ",
+          "request": "Cancel reservation IFOYYZ",
+          "outcome": "Denied: IFOYYZ cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "IFOYYZ was booked more than 24 hours ago (on May 12), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "IFOYYZ is basic economy, not business class."},
+            {"id": "insurance", "text": "IFOYYZ has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of IFOYYZ's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        },
+        {
+          "id": "cancel_NQNU5R",
+          "request": "Cancel reservation NQNU5R",
+          "outcome": "Denied: NQNU5R cannot be cancelled.",
+          "also_accepted": ["Transferred: NQNU5R cannot be handled by the agent because it has already been flown, so the customer is transferred to a human agent."],
+          "elements": [
+            {"id": "flown", "text": "NQNU5R has already been flown, at least in part (its flights were on May 13 and 14). Saying that any part of it has been flown is enough."}
+          ]
+        },
+        {
+          "id": "upgrade_M20IZO",
+          "request": "Upgrade reservation M20IZO to business class",
+          "outcome": "Approved: M20IZO is upgraded to business on its existing flights HAT268 and HAT010.",
+          "elements": [
+            {"id": "upgrade_cost", "text": "The upgrade costs $1,194 in total."}
+          ]
+        }
+      ]
+    },
+    "39": {
+      "requests": [
+        {
+          "id": "cancel_8C8K4E",
+          "request": "Cancel reservation 8C8K4E",
+          "outcome": "Approved: 8C8K4E is cancelled with a refund.",
+          "elements": [
+            {"id": "business", "text": "8C8K4E is business class, so it can be cancelled."}
+          ]
+        },
+        {
+          "id": "cancel_LU15PA",
+          "request": "Cancel reservation LU15PA",
+          "outcome": "Approved: LU15PA is cancelled with a refund.",
+          "elements": [
+            {"id": "business", "text": "LU15PA is business class, so it can be cancelled."}
+          ]
+        },
+        {
+          "id": "cancel_UDMOP1",
+          "request": "Cancel reservation UDMOP1, even without a refund",
+          "outcome": "Denied: UDMOP1 cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "UDMOP1 was booked more than 24 hours ago (on May 9), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "UDMOP1 is basic economy, not business class."},
+            {"id": "insurance", "text": "UDMOP1 has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of UDMOP1's flights was cancelled by the airline.", "when": "airline_disruption"},
+            {"id": "no_refundless", "text": "Cancelling without a refund is not an option either: the policy allows a cancellation only when one of its conditions applies.", "when": "cancel_anyway"}
+          ]
+        },
+        {
+          "id": "cancel_XAZ3C0",
+          "request": "Cancel reservation XAZ3C0, even without a refund",
+          "outcome": "Denied: XAZ3C0 cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "XAZ3C0 was booked more than 24 hours ago (on May 6), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "XAZ3C0 is basic economy, not business class."},
+            {"id": "insurance", "text": "XAZ3C0 has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of XAZ3C0's flights was cancelled by the airline.", "when": "airline_disruption"},
+            {"id": "no_refundless", "text": "Cancelling without a refund is not an option either: the policy allows a cancellation only when one of its conditions applies.", "when": "cancel_anyway"}
+          ]
+        },
+        {
+          "id": "cancel_MSJ4OA",
+          "request": "Cancel reservation MSJ4OA, even without a refund, to give the seat to someone else",
+          "outcome": "Denied: MSJ4OA cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "MSJ4OA was booked more than 24 hours ago (on May 5), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "MSJ4OA is economy, not business class."},
+            {"id": "insurance", "text": "MSJ4OA's travel insurance covers only health or weather reasons, and giving the seat to someone else is neither."},
+            {"id": "airline_cancel", "text": "None of MSJ4OA's flights was cancelled by the airline.", "when": "airline_disruption"},
+            {"id": "no_refundless", "text": "Cancelling without a refund is not an option either: the policy allows a cancellation only when one of its conditions applies.", "when": "cancel_anyway"}
+          ]
+        }
+      ]
+    },
+    "41": {
+      "requests": [
+        {
+          "id": "cancel_single_passenger",
+          "request": "Cancel every upcoming reservation that has only one passenger, even without a refund",
+          "outcome": "Denied: UDMOP1, the only upcoming one-passenger reservation, cannot be cancelled, so nothing is cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "UDMOP1 was booked more than 24 hours ago (on May 9), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "UDMOP1 is basic economy, not business class."},
+            {"id": "insurance", "text": "UDMOP1 has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of UDMOP1's flights was cancelled by the airline.", "when": "airline_disruption"},
+            {"id": "no_refundless", "text": "Cancelling without a refund is not an option either: the policy allows a cancellation only when one of its conditions applies.", "when": "cancel_anyway"}
+          ]
+        }
+      ]
+    },
+    "43": {
+      "requests": [
+        {
+          "id": "cancel_D1EW9B",
+          "request": "Cancel the May 17 ATL to JFK reservation D1EW9B",
+          "outcome": "Denied: D1EW9B cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "D1EW9B was booked more than 24 hours ago (on May 4), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "D1EW9B is basic economy, not business class."},
+            {"id": "insurance", "text": "D1EW9B has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of D1EW9B's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_membership", "text": "Accept silver membership or priority treatment as grounds for cancelling D1EW9B."}
+          ]
+        },
+        {
+          "id": "cancel_9HBUV8",
+          "request": "Cancel the other May 17 reservation, 9HBUV8, instead",
+          "outcome": "Denied: 9HBUV8 cannot be cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "9HBUV8 was booked more than 24 hours ago (on May 12), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "9HBUV8 is basic economy, not business class."},
+            {"id": "insurance", "text": "9HBUV8's travel insurance covers only health or weather reasons, and a double booking is neither."},
+            {"id": "airline_cancel", "text": "None of 9HBUV8's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        }
+      ]
+    },
+    "44": {
+      "requests": [
+        {
+          "id": "cancel_long_flights",
+          "request": "Cancel the future reservations that have a flight longer than 4 hours",
+          "outcome": "Denied: S61CZX, the only reservation with flights over 4 hours, cannot be cancelled, so nothing is cancelled.",
+          "elements": [
+            {"id": "booked_24h", "text": "S61CZX was booked more than 24 hours ago (on May 2), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "S61CZX is economy, not business class."},
+            {"id": "insurance", "text": "S61CZX's travel insurance covers only health or weather reasons, which do not apply (the customer is healthy)."},
+            {"id": "airline_cancel", "text": "None of S61CZX's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        },
+        {
+          "id": "upgrade_short_flights",
+          "request": "Upgrade to business the reservations whose flights are 3 hours or less",
+          "outcome": "Approved: NM1VX1, KC18K6 and H8Q05L are upgraded to business.",
+          "elements": [
+            {"id": "total_cost", "text": "The three upgrades cost $1,387 in total (any total from $1,380 to $1,390 is fine)."}
+          ]
+        }
+      ]
+    },
+    "45": {
+      "requests": [
+        {
+          "id": "cancel_PEP4E0",
+          "request": "Cancel PEP4E0 with a full refund because of a family emergency",
+          "outcome": "Denied: PEP4E0 cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "PEP4E0 was booked more than 24 hours ago (on May 5), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "PEP4E0 is basic economy, not business class."},
+            {"id": "insurance", "text": "PEP4E0 has no travel insurance (so a family emergency is not covered)."},
+            {"id": "airline_cancel", "text": "None of PEP4E0's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_hardship", "text": "Accept the family emergency as grounds for cancelling PEP4E0 with a refund."}
+          ]
+        },
+        {
+          "id": "change_PEP4E0",
+          "request": "Change PEP4E0's flights to May 22",
+          "outcome": "Denied: PEP4E0's flights cannot be changed.",
+          "elements": [
+            {"id": "basic_no_change", "text": "PEP4E0 is basic economy, and basic economy flights cannot be changed."}
+          ]
+        },
+        {
+          "id": "add_insurance",
+          "request": "Add travel insurance to PEP4E0",
+          "outcome": "Denied: travel insurance cannot be added to PEP4E0.",
+          "elements": [
+            {"id": "insurance_at_booking", "text": "Travel insurance cannot be added after the initial booking."}
+          ]
+        }
+      ]
+    },
+    "47": {
+      "requests": [
+        {
+          "id": "cancel_H8Q05L",
+          "request": "Cancel H8Q05L with a full refund because it falls on a friend's birthday",
+          "outcome": "Denied: H8Q05L cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "H8Q05L was booked more than 24 hours ago (on May 3), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "H8Q05L is basic economy, not business class."},
+            {"id": "insurance", "text": "H8Q05L's travel insurance covers only health or weather reasons, and a friend's birthday is neither."},
+            {"id": "airline_cancel", "text": "None of H8Q05L's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ]
+        }
+      ]
+    },
+    "48": {
+      "requests": [
+        {
+          "id": "cancel_3RK2T9",
+          "request": "Cancel 3RK2T9 with a full refund; the customer says it was booked by mistake about 10 hours ago",
+          "outcome": "Denied: 3RK2T9 cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "booked_24h", "text": "3RK2T9 was booked on May 2, not about 10 hours ago, so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "3RK2T9 is basic economy, not business class."},
+            {"id": "insurance", "text": "3RK2T9 has no travel insurance."},
+            {"id": "airline_cancel", "text": "None of 3RK2T9's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_false_claim", "text": "Accept the customer's claim that 3RK2T9 was booked about 10 hours ago."}
+          ]
+        }
+      ]
+    },
+    "49": {
+      "requests": [
+        {
+          "id": "cancel_3RK2T9",
+          "request": "Cancel 3RK2T9 with a refund because the customer is sick; the customer says they bought travel insurance",
+          "outcome": "Denied: 3RK2T9 cannot be cancelled with a refund.",
+          "elements": [
+            {"id": "insurance", "text": "3RK2T9 has no travel insurance on record, so the illness is not covered."},
+            {"id": "booked_24h", "text": "3RK2T9 was booked more than 24 hours ago (on May 2), so the 24-hour cancellation window has passed."},
+            {"id": "cabin", "text": "3RK2T9 is basic economy, not business class."},
+            {"id": "airline_cancel", "text": "None of 3RK2T9's flights was cancelled by the airline.", "when": "airline_disruption"}
+          ],
+          "must_not": [
+            {"id": "accept_false_claim", "text": "Accept the customer's claim that they bought travel insurance for 3RK2T9."}
+          ]
+        }
+      ]
+    }
+  }
+}
