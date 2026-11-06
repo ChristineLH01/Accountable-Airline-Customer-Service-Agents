@@ -41,6 +41,12 @@ DEFAULT_SEMANTIC_COMMUNICATE_MODEL_ARGS = dict(DEFAULT_LLM_JUDGE_ARGS)
 DEFAULT_LLM_NL_ASSERTIONS = DEFAULT_LLM_JUDGE
 DEFAULT_LLM_NL_ASSERTIONS_ARGS = dict(DEFAULT_LLM_JUDGE_ARGS)
 
+# Decision-reason judge (--reason-scoring): grades the decision and the
+# policy-based reason the agent told the customer against the golden labels in
+# data/tau2-airline/mannual_label.json.
+DEFAULT_LLM_REASON_JUDGE = DEFAULT_LLM_JUDGE
+DEFAULT_LLM_REASON_JUDGE_ARGS = dict(DEFAULT_LLM_JUDGE_ARGS)
+
 # Post-hoc conversation review (--auto-review, `tau2 review`); never affects reward.
 DEFAULT_LLM_REVIEW = DEFAULT_LLM_JUDGE
 DEFAULT_LLM_REVIEW_ARGS = dict(DEFAULT_LLM_JUDGE_ARGS)

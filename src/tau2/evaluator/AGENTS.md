@@ -17,12 +17,13 @@ classmethod-only class that takes a task and a message trajectory
 | `evaluator_action.py` | `ActionEvaluator` | Each reference action matches some agent or user tool call | `ACTION` |
 | `evaluator_communicate.py` | `CommunicateEvaluator` | The agent conveyed each `communicate_info` fact | `COMMUNICATE` |
 | `evaluator_nl_assertions.py` | `NLAssertionsEvaluator` | LLM-judged natural-language assertions (experimental) | `NL_ASSERTION` |
+| `evaluator_reason.py` | `ReasonEvaluator` | The agent told the customer the golden decision and golden reason (`mannual_label.json`); applied by the run, not the task's `reward_basis` | `REASON` |
 
 All subclass `EvaluatorBase` (`evaluator_base.py`).
 
 ### Composition via `evaluate_simulation()`
 
-`evaluate_simulation(simulation, task, evaluation_type, domain, env_kwargs=None, strict_replay=True, *, communicate_scoring)`
+`evaluate_simulation(simulation, task, evaluation_type, domain, env_kwargs=None, strict_replay=True, *, communicate_scoring, reason_scoring=None)`
 in `evaluator.py` is the entry point. It:
 1. Returns reward 0 if the simulation did not end with `AGENT_STOP` or `USER_STOP`.
 2. Returns reward 1 if the task has no `evaluation_criteria`.
@@ -85,10 +86,18 @@ and `tau2.scripts.evaluate_trajectories` (`tau2 evaluate-trajs`,
    no LLM calls. The judge prompts are calibrated; a wording change should
    come with a new `SemanticCommunicateSettings.prompt_version`.
 
-8. **NL assertions require LLM calls**: `NLAssertionsEvaluator` calls
+8. **Decision-reason scoring**: `ReasonScoring` (`gate` default, `report`,
+   `off`) applies to the combined evaluation types only. One `reason_eval` call
+   per simulation, with validated JSON replies (2 retries). The pass rule is in
+   `ReasonCheck.from_reply`. Unlabeled and `excluded_from_scoring` tasks are
+   skipped without a call. `apply_reason_scoring` sets `task_reward` before
+   multiplying `REASON` in. The prompt is pinned by digest; bump
+   `prompt_version` with any change.
+
+9. **NL assertions require LLM calls**: `NLAssertionsEvaluator` calls
    `DEFAULT_LLM_NL_ASSERTIONS` from `config.py`. Experimental.
 
-9. **Conversation review never affects reward**: `reviewer.py`
+10. **Conversation review never affects reward**: `reviewer.py`
    (`review_simulation`, `ReviewMode`), `review_llm_judge.py`
    (`ConversationReviewer`), `review_llm_judge_user_only.py`
    (`UserOnlyReviewer`) and `auth_classifier.py` (`AuthenticationClassifier`)

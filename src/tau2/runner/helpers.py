@@ -113,6 +113,15 @@ def make_run_name(config: RunConfig) -> str:
     )
 
 
+def _golden_labels_sha256(config: RunConfig) -> Optional[str]:
+    """Digest of the golden labels a reason-scored airline run grades against."""
+    if not config.reason_scoring.enabled or config.domain != "airline":
+        return None
+    from tau2.domains.airline.golden_reasons import golden_labels_sha256
+
+    return golden_labels_sha256()
+
+
 def get_info(config: RunConfig) -> Info:
     """Create an Info object for storing run configuration metadata.
 
@@ -143,4 +152,6 @@ def get_info(config: RunConfig) -> Info:
         environment_info=environment_info,
         seed=config.seed,
         communicate_scoring=config.communicate_scoring,
+        reason_scoring=config.reason_scoring,
+        golden_labels_sha256=_golden_labels_sha256(config),
     )

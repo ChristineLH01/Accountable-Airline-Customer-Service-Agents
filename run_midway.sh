@@ -4,10 +4,10 @@
 # Default: 3 trials per task, saved as passk_a and passk_b.
 # Change with: TRIALS=1 A_NAME=x B_NAME=y bash run_midway.sh
 # Steps: check key, fix the prompt join in Method B, run tests,
-# run A and B on the 18 cancel tasks, then print the summary table.
+# run A and B on the 15 scored cancel tasks, then print the summary table.
 set -e
 
-TASKS="0 1 7 9 19 24 26 28 35 37 39 41 43 44 45 47 48 49"
+TASKS="0 1 7 19 24 26 28 35 41 43 44 45 47 48 49"
 MODEL="openai/gpt-6.1-sol"
 TRIALS="${TRIALS:-3}"
 A_NAME="${A_NAME:-passk_a}"

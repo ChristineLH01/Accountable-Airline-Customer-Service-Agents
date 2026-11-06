@@ -256,6 +256,11 @@ class RewardType(str, Enum):
       (per `Action.compare_with_tool_call`). The only reward type that
       makes the action list a hard requirement — promotes it to the
       assumed-unique correct trajectory. Not used by the airline tasks.
+    - REASON: the agent told the customer the golden decision and its
+      golden policy-based reason, as judged by the decision-reason LLM
+      judge. Not a task-level basis: a run adds it on top of the task's
+      `reward_basis` with `--reason-scoring gate` (the default), and only
+      for tasks that have a final, non-excluded golden label.
 
     See `docs/evaluation.md`.
     """
@@ -265,6 +270,7 @@ class RewardType(str, Enum):
     NL_ASSERTION = "NL_ASSERTION"
     ACTION = "ACTION"
     COMMUNICATE = "COMMUNICATE"
+    REASON = "REASON"
 
 
 class TaskIssueStatus(str, Enum):

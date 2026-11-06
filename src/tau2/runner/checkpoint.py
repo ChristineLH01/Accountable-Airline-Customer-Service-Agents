@@ -100,6 +100,15 @@ def try_resume(
     current_info = simulation_results.info
     if previous_info.communicate_scoring != current_info.communicate_scoring:
         raise ValueError("Communicate-info scorer changed; use a new output path")
+    if previous_info.effective_reason_scoring != current_info.effective_reason_scoring:
+        raise ValueError("Decision-reason scorer changed; use a new output path")
+    if (
+        current_info.effective_reason_scoring.enabled
+        and previous_info.golden_labels_sha256 != current_info.golden_labels_sha256
+    ):
+        raise ValueError(
+            "Golden labels changed since this run started; use a new output path"
+        )
 
     # Check if the run config has changed (exclude policy which may change between runs)
     exclude_fields = {"environment_info": {"policy"}}

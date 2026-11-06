@@ -9,6 +9,7 @@ from loguru import logger
 from rich.console import Console
 from rich.progress import Progress
 
+from tau2.data_model.reason_scoring import ReasonScoring
 from tau2.data_model.simulation import Results
 from tau2.evaluator.evaluator import EvaluationType, evaluate_simulation
 from tau2.metrics.agent_metrics import compute_metrics
@@ -45,6 +46,7 @@ def compute_simulation_rewards(
     evaluation_type: EvaluationType = EvaluationType.ALL,
     console: Optional[Console] = None,
     fresh_tasks: bool = False,
+    reason_scoring: Optional[ReasonScoring] = None,
 ) -> Results:
     """
     Compute and update rewards for all simulations in the results.
@@ -55,6 +57,10 @@ def compute_simulation_rewards(
         console: Optional Rich console for output
         fresh_tasks: Re-grade against the current task definitions from the
             data directory instead of the ones embedded in the results file.
+        reason_scoring: Decision-reason scorer to use; defaults to the one
+            recorded in the results (off for results recorded before it
+            existed). The scorer used and the label digest are written back to
+            the results' info.
     """
     results = deepcopy(results)
     if fresh_tasks:
@@ -62,6 +68,13 @@ def compute_simulation_rewards(
     domain = results.info.environment_info.domain_name
     tasks = {task.id: task for task in results.tasks}
     scoring = results.info.effective_communicate_scoring
+    reason_scoring = reason_scoring or results.info.effective_reason_scoring
+    results.info.reason_scoring = reason_scoring
+    results.info.golden_labels_sha256 = None
+    if reason_scoring.enabled and domain == "airline":
+        from tau2.domains.airline.golden_reasons import golden_labels_sha256
+
+        results.info.golden_labels_sha256 = golden_labels_sha256()
 
     progress_context = Progress(console=console) if console else None
 
@@ -81,6 +94,7 @@ def compute_simulation_rewards(
                 evaluation_type=evaluation_type,
                 strict_replay=False,
                 communicate_scoring=scoring,
+                reason_scoring=reason_scoring,
             )
 
             # Update the simulation with new reward info
@@ -100,6 +114,7 @@ def evaluate_trajectories(
     output_dir: str | None = None,
     evaluation_type: EvaluationType = EvaluationType.ALL,
     fresh_tasks: bool = False,
+    reason_scoring: Optional[ReasonScoring] = None,
 ) -> None:
     """
     Evaluate trajectories and optionally save updated results with recomputed rewards.
@@ -110,6 +125,8 @@ def evaluate_trajectories(
         evaluation_type: Type of evaluation to perform
         fresh_tasks: Re-grade against the current task definitions from the data
             directory instead of the ones embedded in each results file.
+        reason_scoring: Decision-reason scorer to apply; defaults to the one
+            recorded in each results file.
     """
     files = expand_paths(input_paths, extension=".json")
     console = ConsoleDisplay.console
@@ -151,6 +168,7 @@ def evaluate_trajectories(
                 evaluation_type=evaluation_type,
                 console=console,
                 fresh_tasks=fresh_tasks,
+                reason_scoring=reason_scoring,
             )
             console.print(
                 f"  ✅ Computed rewards for {len(updated_results.simulations)} simulation(s)",
@@ -215,15 +233,27 @@ def make_parser():
         action="store_true",
         help="Re-grade against the current task definitions from the data directory instead of the ones embedded in each results file.",
     )
+    from tau2.cli import add_reason_scoring_args
+
+    add_reason_scoring_args(
+        parser, default_help="the scorer recorded in each results file"
+    )
     return parser
 
 
 def main():
     """Evaluate trajectories from command line."""
+    from tau2.cli import reason_scoring_from_args
+
     logger.configure(handlers=[{"sink": sys.stderr, "level": "ERROR"}])
     parser = make_parser()
     args = parser.parse_args()
-    evaluate_trajectories(args.paths, args.output_dir, fresh_tasks=args.fresh_tasks)
+    evaluate_trajectories(
+        args.paths,
+        args.output_dir,
+        fresh_tasks=args.fresh_tasks,
+        reason_scoring=reason_scoring_from_args(args),
+    )
 
 
 if __name__ == "__main__":

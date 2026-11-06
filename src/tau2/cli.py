@@ -21,6 +21,11 @@ from tau2.config import (
     TEXT_BENCHMARK_LLM_ARGS_USER,
     TEXT_BENCHMARK_LLM_USER,
 )
+from tau2.data_model.reason_scoring import (
+    ReasonJudgeSettings,
+    ReasonScoring,
+    ReasonScoringMode,
+)
 from tau2.data_model.semantic_communication import (
     CommunicateScorer,
     CommunicateScoring,
@@ -98,7 +103,7 @@ def add_run_args(parser):
         "--task-split-name",
         type=str,
         default="base",
-        help="The task split to run the simulation on (base, train or test). Default is 'base'.",
+        help="The task split to run the simulation on (base, train, test or scored). Default is 'base'.",
     )
     parser.add_argument(
         "--task-ids",
@@ -206,6 +211,7 @@ def add_run_args(parser):
         metavar="JSON",
         help='Semantic judge overrides, e.g. {"model": "...", "model_args": {...}}.',
     )
+    add_reason_scoring_args(parser)
 
     # Resume mode
     parser.add_argument(
@@ -240,6 +246,41 @@ def add_run_args(parser):
         action="store_true",
         default=False,
         help="Print the resolved run configuration as JSON without running anything.",
+    )
+
+
+def add_reason_scoring_args(parser, *, default_help: str = "gate"):
+    """Add the decision-reason scoring flags (shared by run and evaluate-trajs)."""
+    parser.add_argument(
+        "--reason-scoring",
+        choices=[mode.value for mode in ReasonScoringMode],
+        default=None,
+        help="Decision-reason scoring against the golden labels: 'gate' multiplies "
+        "REASON into the final reward, 'report' records the judge's verdict "
+        f"without changing the reward, 'off' skips it. Default: {default_help}.",
+    )
+    parser.add_argument(
+        "--reason-judge",
+        type=json.loads,
+        default=None,
+        metavar="JSON",
+        help='Reason judge overrides, e.g. {"model": "...", "model_args": {...}}.',
+    )
+
+
+def reason_scoring_from_args(args: argparse.Namespace):
+    """The explicit decision-reason scorer a command requests, if any."""
+    mode = getattr(args, "reason_scoring", None)
+    judge = getattr(args, "reason_judge", None)
+    if mode is None and judge is None:
+        return None
+    mode = ReasonScoringMode(mode or ReasonScoringMode.GATE)
+    if mode == ReasonScoringMode.OFF:
+        if judge is not None:
+            raise ValueError("--reason-judge applies to the gate and report modes")
+        return ReasonScoring(mode=mode)
+    return ReasonScoring(
+        mode=mode, judge=ReasonJudgeSettings.model_validate(judge or {})
     )
 
 
@@ -294,6 +335,9 @@ def config_from_args(args: argparse.Namespace) -> RunConfig:
     communicate_scoring = communicate_scoring_from_args(args)
     if communicate_scoring is not None:
         kwargs["communicate_scoring"] = communicate_scoring
+    reason_scoring = reason_scoring_from_args(args)
+    if reason_scoring is not None:
+        kwargs["reason_scoring"] = reason_scoring
     return RunConfig(**kwargs)
 
 
@@ -479,6 +523,9 @@ def main():
         action="store_true",
         help="Re-grade against the current task definitions from the data directory instead of the ones embedded in each results file.",
     )
+    add_reason_scoring_args(
+        evaluate_parser, default_help="the scorer recorded in each results file"
+    )
     evaluate_parser.set_defaults(func=lambda args: run_evaluate_trajectories(args))
 
     # Review command - LLM-based conversation review
@@ -613,7 +660,10 @@ def run_evaluate_trajectories(args):
     logger.configure(handlers=[{"sink": sys.stderr, "level": "ERROR"}])
 
     evaluate_trajectories(
-        args.paths, args.output_dir, fresh_tasks=getattr(args, "fresh_tasks", False)
+        args.paths,
+        args.output_dir,
+        fresh_tasks=getattr(args, "fresh_tasks", False),
+        reason_scoring=reason_scoring_from_args(args),
     )
 
 
