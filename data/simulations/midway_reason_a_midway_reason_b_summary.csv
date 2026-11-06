@@ -1,0 +1,109 @@
+run,task_id,trial,reward,cancel_calls,checklists,blocked,decisions,debug_found
+midway_reason_a,0,0,1.0,0,0,0,,True
+midway_reason_a,1,0,1.0,0,0,0,,True
+midway_reason_a,7,0,0.0,2,0,0,,True
+midway_reason_a,9,0,1.0,0,0,0,,True
+midway_reason_a,19,0,1.0,1,0,0,,True
+midway_reason_a,24,0,1.0,0,0,0,,True
+midway_reason_a,26,0,1.0,0,0,0,,True
+midway_reason_a,28,0,1.0,0,0,0,,True
+midway_reason_a,35,0,0.0,0,0,0,,True
+midway_reason_a,37,0,1.0,0,0,0,,True
+midway_reason_a,39,0,0.0,2,0,0,,True
+midway_reason_a,41,0,1.0,0,0,0,,True
+midway_reason_a,43,0,1.0,0,0,0,,True
+midway_reason_a,44,0,0.0,0,0,0,,True
+midway_reason_a,45,0,1.0,0,0,0,,True
+midway_reason_a,47,0,1.0,0,0,0,,True
+midway_reason_a,48,0,1.0,0,0,0,,True
+midway_reason_a,49,0,1.0,0,0,0,,True
+midway_reason_a,0,1,1.0,0,0,0,,True
+midway_reason_a,1,1,1.0,0,0,0,,True
+midway_reason_a,7,1,0.0,2,0,0,,True
+midway_reason_a,9,1,1.0,0,0,0,,True
+midway_reason_a,19,1,1.0,1,0,0,,True
+midway_reason_a,24,1,0.0,0,0,0,,True
+midway_reason_a,26,1,1.0,0,0,0,,True
+midway_reason_a,28,1,1.0,0,0,0,,True
+midway_reason_a,35,1,0.0,0,0,0,,True
+midway_reason_a,37,1,1.0,0,0,0,,True
+midway_reason_a,39,1,0.0,2,0,0,,True
+midway_reason_a,41,1,1.0,0,0,0,,True
+midway_reason_a,43,1,1.0,0,0,0,,True
+midway_reason_a,44,1,0.0,0,0,0,,True
+midway_reason_a,45,1,1.0,0,0,0,,True
+midway_reason_a,47,1,1.0,0,0,0,,True
+midway_reason_a,48,1,1.0,0,0,0,,True
+midway_reason_a,49,1,1.0,0,0,0,,True
+midway_reason_a,0,2,1.0,0,0,0,,True
+midway_reason_a,1,2,1.0,0,0,0,,True
+midway_reason_a,7,2,0.0,2,0,0,,True
+midway_reason_a,9,2,1.0,0,0,0,,True
+midway_reason_a,19,2,1.0,1,0,0,,True
+midway_reason_a,24,2,1.0,0,0,0,,True
+midway_reason_a,26,2,1.0,0,0,0,,True
+midway_reason_a,28,2,1.0,0,0,0,,True
+midway_reason_a,35,2,0.0,0,0,0,,True
+midway_reason_a,37,2,0.0,0,0,0,,True
+midway_reason_a,39,2,0.0,2,0,0,,True
+midway_reason_a,41,2,1.0,0,0,0,,True
+midway_reason_a,43,2,1.0,0,0,0,,True
+midway_reason_a,44,2,0.0,0,0,0,,True
+midway_reason_a,45,2,1.0,0,0,0,,True
+midway_reason_a,47,2,1.0,0,0,0,,True
+midway_reason_a,48,2,1.0,0,0,0,,True
+midway_reason_a,49,2,1.0,0,0,0,,True
+midway_reason_b,0,0,1.0,0,0,0,,True
+midway_reason_b,1,0,1.0,0,1,0,Q69X3R=DENY,True
+midway_reason_b,7,0,0.0,2,3,0,XEHM4B=DENY 59XX6W=ALLOW XEHM4B=ALLOW,True
+midway_reason_b,9,0,1.0,0,2,0,IFOYYZ=DENY NQNU5R=TRANSFER,True
+midway_reason_b,19,0,0.0,0,0,0,,True
+midway_reason_b,24,0,1.0,0,1,0,H9ZU1C=DENY,True
+midway_reason_b,26,0,1.0,0,0,0,,True
+midway_reason_b,28,0,1.0,0,1,0,SI5UKW=DENY,True
+midway_reason_b,35,0,0.0,0,1,0,M20IZO=DENY,True
+midway_reason_b,37,0,1.0,0,2,0,IFOYYZ=DENY NQNU5R=TRANSFER,True
+midway_reason_b,39,0,0.0,2,5,0,8C8K4E=ALLOW UDMOP1=DENY XAZ3C0=DENY LU15PA=ALLOW MSJ4OA=DENY,True
+midway_reason_b,41,0,1.0,0,1,0,UDMOP1=DENY,True
+midway_reason_b,43,0,1.0,0,2,0,D1EW9B=DENY 9HBUV8=DENY,True
+midway_reason_b,44,0,0.0,0,1,0,S61CZX=DENY,True
+midway_reason_b,45,0,1.0,0,1,0,PEP4E0=DENY,True
+midway_reason_b,47,0,1.0,0,1,0,H8Q05L=DENY,True
+midway_reason_b,48,0,1.0,0,1,0,3RK2T9=DENY,True
+midway_reason_b,49,0,1.0,0,1,0,3RK2T9=DENY,True
+midway_reason_b,0,1,1.0,0,0,0,,True
+midway_reason_b,1,1,1.0,0,0,0,,True
+midway_reason_b,7,1,0.0,2,3,0,XEHM4B=DENY 59XX6W=ALLOW XEHM4B=ALLOW,True
+midway_reason_b,9,1,1.0,0,0,0,,True
+midway_reason_b,19,1,1.0,1,1,0,Z7GOZK=ALLOW,True
+midway_reason_b,24,1,1.0,0,1,0,H9ZU1C=DENY,True
+midway_reason_b,26,1,1.0,0,1,0,3FRNFB=DENY,True
+midway_reason_b,28,1,1.0,0,1,0,SI5UKW=DENY,True
+midway_reason_b,35,1,0.0,0,1,0,M20IZO=DENY,True
+midway_reason_b,37,1,1.0,0,2,0,IFOYYZ=DENY NQNU5R=TRANSFER,True
+midway_reason_b,39,1,0.0,2,5,0,8C8K4E=ALLOW UDMOP1=DENY XAZ3C0=DENY LU15PA=ALLOW MSJ4OA=DENY,True
+midway_reason_b,41,1,1.0,0,1,0,UDMOP1=DENY,True
+midway_reason_b,43,1,1.0,0,2,0,D1EW9B=DENY 9HBUV8=DENY,True
+midway_reason_b,44,1,0.0,0,1,0,S61CZX=DENY,True
+midway_reason_b,45,1,1.0,0,1,0,PEP4E0=DENY,True
+midway_reason_b,47,1,1.0,0,1,0,H8Q05L=DENY,True
+midway_reason_b,48,1,1.0,0,1,0,3RK2T9=DENY,True
+midway_reason_b,49,1,1.0,0,1,0,3RK2T9=DENY,True
+midway_reason_b,0,2,1.0,0,0,0,,True
+midway_reason_b,1,2,1.0,0,0,0,,True
+midway_reason_b,7,2,0.0,2,3,0,XEHM4B=DENY 59XX6W=ALLOW XEHM4B=ALLOW,True
+midway_reason_b,9,2,1.0,0,2,0,IFOYYZ=DENY NQNU5R=TRANSFER,True
+midway_reason_b,19,2,1.0,1,1,0,Z7GOZK=ALLOW,True
+midway_reason_b,24,2,1.0,0,1,0,H9ZU1C=DENY,True
+midway_reason_b,26,2,1.0,0,0,0,,True
+midway_reason_b,28,2,1.0,0,1,0,SI5UKW=DENY,True
+midway_reason_b,35,2,0.0,0,1,0,M20IZO=DENY,True
+midway_reason_b,37,2,0.0,0,0,0,,True
+midway_reason_b,39,2,0.0,2,5,0,8C8K4E=ALLOW UDMOP1=DENY XAZ3C0=DENY LU15PA=ALLOW MSJ4OA=DENY,True
+midway_reason_b,41,2,1.0,0,1,0,UDMOP1=DENY,True
+midway_reason_b,43,2,1.0,0,2,0,D1EW9B=DENY 9HBUV8=DENY,True
+midway_reason_b,44,2,0.0,0,1,0,S61CZX=DENY,True
+midway_reason_b,45,2,1.0,0,2,0,PEP4E0=DENY PEP4E0=DENY,True
+midway_reason_b,47,2,1.0,0,1,0,H8Q05L=DENY,True
+midway_reason_b,48,2,1.0,0,1,0,3RK2T9=DENY,True
+midway_reason_b,49,2,1.0,0,1,0,3RK2T9=DENY,True

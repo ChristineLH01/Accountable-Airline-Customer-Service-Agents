@@ -1,0 +1,865 @@
+run,task_id,trial,request,check,kind,applies,ok,verdict,quote,quote_found
+midway_reason_a,0,0,cancel_EHGLP3,outcome,outcome,True,True,told,"EHGLP3 has no insurance, is basic economy, was booked more than 24 hours ago, and neither flight is airline-cancelled, so I cannot approve a refund.",True
+midway_reason_a,0,0,cancel_EHGLP3,booked_24h,element,True,True,conveyed,was booked on May 4 (more than 24 hours ago),True
+midway_reason_a,0,0,cancel_EHGLP3,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,0,0,cancel_EHGLP3,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,0,0,cancel_EHGLP3,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_a,0,0,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_a,0,1,cancel_EHGLP3,outcome,outcome,True,True,told,Your reservation does not qualify for cancellation with a refund under the policy:,True
+midway_reason_a,0,1,cancel_EHGLP3,booked_24h,element,True,True,conveyed,"it was booked on May 4, outside the 24-hour window",True
+midway_reason_a,0,1,cancel_EHGLP3,cabin,element,True,True,conveyed,is basic economy,True
+midway_reason_a,0,1,cancel_EHGLP3,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,0,1,cancel_EHGLP3,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline.,True
+midway_reason_a,0,1,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_a,0,2,cancel_EHGLP3,outcome,outcome,True,True,told,Your reservation EHGLP3 does not qualify for cancellation with a refund under the policy,True
+midway_reason_a,0,2,cancel_EHGLP3,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,0,2,cancel_EHGLP3,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,0,2,cancel_EHGLP3,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,0,2,cancel_EHGLP3,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,0,2,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_a,1,0,cancel_Q69X3R,outcome,outcome,True,True,told,"Your economy reservation was booked more than 24 hours ago and has no travel insurance, so it does not qualify under those cancellation rules.",True
+midway_reason_a,1,0,cancel_Q69X3R,booked_24h,element,True,True,conveyed,"Your economy reservation was booked more than 24 hours ago and has no travel insurance, so it does not qualify under those cancellation rules.",True
+midway_reason_a,1,0,cancel_Q69X3R,cabin,element,True,True,conveyed,"Your economy reservation was booked more than 24 hours ago and has no travel insurance, so it does not qualify under those cancellation rules.",True
+midway_reason_a,1,0,cancel_Q69X3R,insurance,element,True,True,conveyed,"Your economy reservation was booked more than 24 hours ago and has no travel insurance, so it does not qualify under those cancellation rules.",True
+midway_reason_a,1,0,cancel_Q69X3R,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,1,0,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_a,1,1,cancel_Q69X3R,outcome,outcome,True,False,not_told,,
+midway_reason_a,1,1,cancel_Q69X3R,booked_24h,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, with no travel insurance.",True
+midway_reason_a,1,1,cancel_Q69X3R,cabin,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, with no travel insurance.",True
+midway_reason_a,1,1,cancel_Q69X3R,insurance,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, with no travel insurance.",True
+midway_reason_a,1,1,cancel_Q69X3R,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,1,1,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_a,1,2,cancel_Q69X3R,outcome,outcome,True,False,not_told,,
+midway_reason_a,1,2,cancel_Q69X3R,booked_24h,element,True,True,conveyed,"Your booking is economy, was made more than 24 hours ago, and has no travel insurance, so it does not qualify under the 24-hour, business-class, or insured-cancellation rules.",True
+midway_reason_a,1,2,cancel_Q69X3R,cabin,element,True,True,conveyed,"Your booking is economy, was made more than 24 hours ago, and has no travel insurance, so it does not qualify under the 24-hour, business-class, or insured-cancellation rules.",True
+midway_reason_a,1,2,cancel_Q69X3R,insurance,element,True,True,conveyed,"Your booking is economy, was made more than 24 hours ago, and has no travel insurance, so it does not qualify under the 24-hour, business-class, or insured-cancellation rules.",True
+midway_reason_a,1,2,cancel_Q69X3R,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,1,2,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_a,7,0,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business with a $1,072 charge to your Visa ending in 2135, then cancelled for both passengers.",True
+midway_reason_a,7,0,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"I cannot cancel XEHM4B under the policy: it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,7,0,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"The new total is $1,368, requiring an additional $1,072 charge to your Visa ending in 2135.",True
+midway_reason_a,7,0,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"Once upgraded, it would qualify for cancellation under the business-cabin cancellation rule, with a $1,368 refund to that card within 5–7 business days.",True
+midway_reason_a,7,0,cancel_59XX6W,outcome,outcome,True,True,told,"59XX6W has been cancelled, with a $624 refund to your Visa ending in 2135 within 5–7 business days.",True
+midway_reason_a,7,0,cancel_59XX6W,insurance,element,True,True,conveyed,"Reservation 59XX6W is eligible for cancellation with a full $624 refund because you purchased travel insurance, which covers cancellation due to illness.",True
+midway_reason_a,7,1,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business for both passengers, charging $1,072 to your Visa ending in 2135, and then cancelled in full.",True
+midway_reason_a,7,1,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"Reservation XEHM4B does not qualify for cancellation under the policy: it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,7,1,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"New total: $1,368; additional charge: $1,072 to your Visa ending in 2135.",True
+midway_reason_a,7,1,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"Once upgraded, it qualifies under the business-class cancellation rule, with a full $1,368 refund to the original payment card within 5–7 business days.",True
+midway_reason_a,7,1,cancel_59XX6W,outcome,outcome,True,True,told,59XX6W has been cancelled for both passengers. Your $624 refund will go to your Visa ending in 2135 within 5–7 business days.,True
+midway_reason_a,7,1,cancel_59XX6W,insurance,element,True,True,conveyed,Cancellation was permitted because your travel insurance covers illness and neither flight had been flown.,True
+midway_reason_a,7,2,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business with a $1,072 charge to your Visa ending in 2135, then cancelled for a full $1,368 refund to that card within 5–7 business days.",True
+midway_reason_a,7,2,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"Reservation XEHM4B is not eligible for cancellation under the policy: it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is airline-cancelled.",True
+midway_reason_a,7,2,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"Upgrading both passengers, Daiki Muller and Omar Ito, to business on HAT005 (May 20) and HAT178 (May 30) would increase the total from $296 to $1,368, charging an additional $1,072 to your Visa ending in 2135.",True
+midway_reason_a,7,2,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"Once upgraded, the reservation would qualify for cancellation under the business-class cancellation rule, with a full $1,368 refund to that card within 5–7 business days.",True
+midway_reason_a,7,2,cancel_59XX6W,outcome,outcome,True,True,told,"59XX6W has been cancelled with a full $624 refund to your Visa ending in 2135, due within 5–7 business days.",True
+midway_reason_a,7,2,cancel_59XX6W,insurance,element,True,True,conveyed,Your travel insurance covers cancellation due to illness.,True
+midway_reason_a,9,0,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: I cannot cancel this reservation under the cancellation policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,9,0,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,9,0,cancel_IFOYYZ,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,9,0,cancel_IFOYYZ,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,9,0,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,9,0,cancel_NQNU5R,outcome,outcome,True,True,told,NQNU5R: I cannot cancel this reservation directly because flight HAT214 has already landed.,True
+midway_reason_a,9,0,cancel_NQNU5R,flown,element,True,True,conveyed,flight HAT214 has already landed,True
+midway_reason_a,9,0,nonstop_M20IZO,outcome,outcome,True,True,told,"M20IZO: I cannot make the requested nonstop change because no nonstop flights were found from JFK to MCO on May 22, 2024. Your reservation remains unchanged.",True
+midway_reason_a,9,0,nonstop_M20IZO,no_direct,element,True,True,conveyed,"no nonstop flights were found from JFK to MCO on May 22, 2024",True
+midway_reason_a,9,1,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: Cancellation is not eligible under the current facts: this is basic economy, booked more than 24 hours ago, without insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,9,1,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,booked more than 24 hours ago,True
+midway_reason_a,9,1,cancel_IFOYYZ,cabin,element,True,True,conveyed,this is basic economy,True
+midway_reason_a,9,1,cancel_IFOYYZ,insurance,element,True,True,conveyed,without insurance,True
+midway_reason_a,9,1,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline.,True
+midway_reason_a,9,1,cancel_NQNU5R,outcome,outcome,True,True,told,NQNU5R: I cannot cancel this reservation because its first flight has already landed.,True
+midway_reason_a,9,1,cancel_NQNU5R,flown,element,True,True,conveyed,its first flight has already landed.,True
+midway_reason_a,9,1,nonstop_M20IZO,outcome,outcome,True,True,told,No reservations have been changed or cancelled.,True
+midway_reason_a,9,1,nonstop_M20IZO,no_direct,element,True,True,conveyed,"no nonstop JFK–MCO flights were found for your existing date, May 22.",True
+midway_reason_a,9,2,cancel_IFOYYZ,outcome,outcome,True,True,told,I cannot approve cancellation under the current facts.,True
+midway_reason_a,9,2,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,This basic economy booking is outside the 24-hour cancellation window,True
+midway_reason_a,9,2,cancel_IFOYYZ,cabin,element,True,True,conveyed,This basic economy booking is outside the 24-hour cancellation window,True
+midway_reason_a,9,2,cancel_IFOYYZ,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,9,2,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,9,2,cancel_NQNU5R,outcome,outcome,True,True,told,YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.,True
+midway_reason_a,9,2,cancel_NQNU5R,flown,element,True,True,conveyed,"The first flight, HAT214 on May 13, has already landed.",True
+midway_reason_a,9,2,nonstop_M20IZO,outcome,outcome,True,True,told,"No nonstop change is available for the reservation’s current date, May 22, 2024.",True
+midway_reason_a,9,2,nonstop_M20IZO,no_direct,element,True,True,conveyed,The nonstop search from JFK to MCO returned no flights for that date.,True
+midway_reason_a,19,0,change_Z7GOZK,outcome,outcome,True,True,told,"I can’t move this flight to a later departure or the next day because your reservation is basic economy, and the policy does not allow flight changes for basic economy reservations.",True
+midway_reason_a,19,0,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"I can’t move this flight to a later departure or the next day because your reservation is basic economy, and the policy does not allow flight changes for basic economy reservations.",True
+midway_reason_a,19,0,cancel_Z7GOZK,outcome,outcome,True,True,told,"Reservation Z7GOZK, including both flights, has been cancelled.",True
+midway_reason_a,19,0,cancel_Z7GOZK,insurance,element,True,True,conveyed,"Your trip is eligible for cancellation with a full refund because your reservation includes travel insurance, which covers cancellation for health reasons, and neither flight has departed.",True
+midway_reason_a,19,1,change_Z7GOZK,outcome,outcome,True,True,told,"I can’t move this flight to a later departure or the next day because the reservation is in basic economy, and policy does not allow flight changes for basic economy tickets.",True
+midway_reason_a,19,1,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"I can’t move this flight to a later departure or the next day because the reservation is in basic economy, and policy does not allow flight changes for basic economy tickets.",True
+midway_reason_a,19,1,cancel_Z7GOZK,outcome,outcome,True,True,told,"Reservation Z7GOZK is cancelled, including both May 28 flights. Your travel insurance permits a full refund for cancellation due to illness. Your $169 refund has been initiated to your original gift card and will arrive within 5–7 business days.",True
+midway_reason_a,19,1,cancel_Z7GOZK,insurance,element,True,True,conveyed,"Your trip is eligible for cancellation with a full refund because reservation Z7GOZK has travel insurance, illness is a covered reason, and neither flight has been flown.",True
+midway_reason_a,19,2,change_Z7GOZK,outcome,outcome,True,True,told,"I can’t move this flight to a later departure or the next morning because your reservation is basic economy, and the policy does not allow flight changes for basic economy reservations.",True
+midway_reason_a,19,2,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"I can’t move this flight to a later departure or the next morning because your reservation is basic economy, and the policy does not allow flight changes for basic economy reservations.",True
+midway_reason_a,19,2,cancel_Z7GOZK,outcome,outcome,True,True,told,"Your entire round-trip reservation Z7GOZK has been cancelled. Your travel insurance covers cancellation for health reasons, so a full $169 refund has been issued to your original gift card and will arrive within 5–7 business days.",True
+midway_reason_a,19,2,cancel_Z7GOZK,insurance,element,True,True,conveyed,"Your cancellation is eligible because your reservation includes travel insurance, which covers cancellation for health reasons, and you’ve said you’re feeling unwell.",True
+midway_reason_a,24,0,remove_passenger,outcome,outcome,True,True,told,"We can address the existing reservation first, but I cannot remove a passenger: the policy does not allow changing the number of passengers on an existing reservation, even through a human agent.",True
+midway_reason_a,24,0,remove_passenger,passenger_count,element,True,True,conveyed,"the policy does not allow changing the number of passengers on an existing reservation, even through a human agent.",True
+midway_reason_a,24,0,cancel_H9ZU1C,outcome,outcome,True,True,told,"Your change-of-plans reason does not qualify under the insurance cancellation rule, and this economy booking is outside the 24-hour window.",True
+midway_reason_a,24,0,cancel_H9ZU1C,booked_24h,element,True,True,conveyed,this economy booking is outside the 24-hour window.,True
+midway_reason_a,24,0,cancel_H9ZU1C,cabin,element,True,True,conveyed,Reservation H9ZU1C is economy,True
+midway_reason_a,24,0,cancel_H9ZU1C,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,24,0,cancel_H9ZU1C,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,24,0,book_JFK_SEA,outcome,outcome,True,True,told,Booked! Your confirmation number is HATHAT.,True
+midway_reason_a,24,0,book_JFK_SEA,price,element,True,True,conveyed,"Total paid: $106—$39 from gift_card_7359776, then $67 from gift_card_7773485.",True
+midway_reason_a,24,0,book_JFK_SEA,free_bag,element,True,True,conveyed,"Checked bags: 1, free under your silver membership allowance.",True
+midway_reason_a,24,1,remove_passenger,outcome,outcome,True,True,told,"I cannot remove a passenger: the policy does not allow changing the number of passengers on a reservation, even through a human agent.",True
+midway_reason_a,24,1,remove_passenger,passenger_count,element,True,True,conveyed,the policy does not allow changing the number of passengers on a reservation,True
+midway_reason_a,24,1,cancel_H9ZU1C,outcome,outcome,True,True,told,Reservation H9ZU1C is not eligible for cancellation under the policy,True
+midway_reason_a,24,1,cancel_H9ZU1C,booked_24h,element,True,True,conveyed,was booked on May 1 (more than 24 hours ago),True
+midway_reason_a,24,1,cancel_H9ZU1C,cabin,element,True,True,conveyed,it is economy,True
+midway_reason_a,24,1,cancel_H9ZU1C,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,24,1,cancel_H9ZU1C,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_a,24,1,book_JFK_SEA,outcome,outcome,True,False,not_told,,
+midway_reason_a,24,1,book_JFK_SEA,price,element,True,False,not conveyed,,
+midway_reason_a,24,1,book_JFK_SEA,free_bag,element,True,False,not conveyed,,
+midway_reason_a,24,2,remove_passenger,outcome,outcome,True,True,told,I can’t remove Ethan from the reservation because the policy does not allow changing the number of passengers on an existing booking.,True
+midway_reason_a,24,2,remove_passenger,passenger_count,element,True,True,conveyed,the policy does not allow changing the number of passengers on an existing booking.,True
+midway_reason_a,24,2,cancel_H9ZU1C,outcome,outcome,True,True,told,I can’t cancel reservation H9ZU1C under the cancellation policy.,True
+midway_reason_a,24,2,cancel_H9ZU1C,booked_24h,element,True,False,not conveyed,,
+midway_reason_a,24,2,cancel_H9ZU1C,cabin,element,True,True,conveyed,"It is an economy booking made more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,24,2,cancel_H9ZU1C,insurance,element,True,True,conveyed,"It is an economy booking made more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,24,2,cancel_H9ZU1C,airline_cancel,element,True,True,conveyed,"It is an economy booking made more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,24,2,book_JFK_SEA,outcome,outcome,True,True,told,Your booking is confirmed.,True
+midway_reason_a,24,2,book_JFK_SEA,price,element,True,True,conveyed,"Both flights were available, your saved gift cards covered the $106 total",True
+midway_reason_a,24,2,book_JFK_SEA,free_bag,element,True,True,conveyed,your silver membership provides one free checked bag in basic economy.,True
+midway_reason_a,26,0,cancel_3FRNFB,outcome,outcome,True,False,not_told,,
+midway_reason_a,26,0,cancel_3FRNFB,booked_24h,element,True,True,conveyed,"This is a basic economy booking made more than 24 hours ago with no travel insurance, so cancellation is only permitted if the airline cancelled a flight.",True
+midway_reason_a,26,0,cancel_3FRNFB,cabin,element,True,True,conveyed,"This is a basic economy booking made more than 24 hours ago with no travel insurance, so cancellation is only permitted if the airline cancelled a flight.",True
+midway_reason_a,26,0,cancel_3FRNFB,insurance,element,True,True,conveyed,"This is a basic economy booking made more than 24 hours ago with no travel insurance, so cancellation is only permitted if the airline cancelled a flight.",True
+midway_reason_a,26,0,cancel_3FRNFB,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,26,1,cancel_3FRNFB,outcome,outcome,True,False,not_told,,
+midway_reason_a,26,1,cancel_3FRNFB,booked_24h,element,True,True,conveyed,"This basic economy booking was made more than 24 hours ago and has no travel insurance, so cancellation and refund eligibility depend on whether the airline canceled a flight.",True
+midway_reason_a,26,1,cancel_3FRNFB,cabin,element,True,True,conveyed,"This basic economy booking was made more than 24 hours ago and has no travel insurance, so cancellation and refund eligibility depend on whether the airline canceled a flight.",True
+midway_reason_a,26,1,cancel_3FRNFB,insurance,element,True,True,conveyed,"This basic economy booking was made more than 24 hours ago and has no travel insurance, so cancellation and refund eligibility depend on whether the airline canceled a flight.",True
+midway_reason_a,26,1,cancel_3FRNFB,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,26,2,cancel_3FRNFB,outcome,outcome,True,False,not_told,,
+midway_reason_a,26,2,cancel_3FRNFB,booked_24h,element,True,False,not conveyed,,
+midway_reason_a,26,2,cancel_3FRNFB,cabin,element,True,False,not conveyed,,
+midway_reason_a,26,2,cancel_3FRNFB,insurance,element,True,False,not conveyed,,
+midway_reason_a,26,2,cancel_3FRNFB,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,28,0,cancel_SI5UKW,outcome,outcome,True,True,told,"Under the cancellation policy, it therefore does not currently qualify for cancellation and a refund.",True
+midway_reason_a,28,0,cancel_SI5UKW,booked_24h,element,True,True,conveyed,"Your booking SI5UKW is basic economy, was made on May 11 (more than 24 hours ago), and has no travel insurance.",True
+midway_reason_a,28,0,cancel_SI5UKW,cabin,element,True,True,conveyed,"Your booking SI5UKW is basic economy, was made on May 11 (more than 24 hours ago), and has no travel insurance.",True
+midway_reason_a,28,0,cancel_SI5UKW,insurance,element,True,True,conveyed,"Your booking SI5UKW is basic economy, was made on May 11 (more than 24 hours ago), and has no travel insurance.",True
+midway_reason_a,28,0,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,"Both flights are currently available, not cancelled by the airline.",True
+midway_reason_a,28,0,alternatives,outcome,outcome,True,True,told,"I cannot authorize a full or 50% refund: your basic economy booking is more than 24 hours old, has no travel insurance, and neither flight is airline-cancelled, so it does not meet the cancellation policy. I also cannot offer a voucher or gift card because compensation is only permitted for qualifying cancelled or delayed flights.",True
+midway_reason_a,28,0,alternatives,no_compensation,element,True,True,conveyed,I also cannot offer a voucher or gift card because compensation is only permitted for qualifying cancelled or delayed flights.,True
+midway_reason_a,28,1,cancel_SI5UKW,outcome,outcome,True,True,told,"Your reservation is not currently eligible for cancellation and a refund under our policy: it is basic economy, was booked on May 11 (more than 24 hours ago), has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,28,1,cancel_SI5UKW,booked_24h,element,True,True,conveyed,was booked on May 11 (more than 24 hours ago),True
+midway_reason_a,28,1,cancel_SI5UKW,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,28,1,cancel_SI5UKW,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,28,1,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,28,1,alternatives,outcome,outcome,True,True,told,"I cannot approve a $124 voucher or gift card, or a 50% refund ($62).",True
+midway_reason_a,28,1,alternatives,no_compensation,element,True,True,conveyed,"Compensation is only permitted for qualifying airline cancellations or delays, neither of which applies here.",True
+midway_reason_a,28,2,cancel_SI5UKW,outcome,outcome,True,True,told,Your reservation SI5UKW is not eligible for cancellation and a refund under our policy.,True
+midway_reason_a,28,2,cancel_SI5UKW,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,28,2,cancel_SI5UKW,cabin,element,True,True,conveyed,It is basic economy,True
+midway_reason_a,28,2,cancel_SI5UKW,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,28,2,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_a,28,2,alternatives,outcome,outcome,True,True,told,"I cannot authorize a full or 50% refund because your basic economy reservation was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline. I also cannot offer a voucher or gift card because policy permits compensation only for qualifying cancelled or delayed flights, and both flights are available.",True
+midway_reason_a,28,2,alternatives,no_compensation,element,True,True,conveyed,"I also cannot offer a voucher or gift card because policy permits compensation only for qualifying cancelled or delayed flights, and both flights are available.",True
+midway_reason_a,35,0,cancel_M20IZO,outcome,outcome,True,True,told,"I cannot approve cancellation or a full refund for a change of plans: this is an economy booking made on May 12, outside the 24-hour cancellation window, with no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,35,0,cancel_M20IZO,booked_24h,element,True,True,conveyed,"this is an economy booking made on May 12, outside the 24-hour cancellation window",True
+midway_reason_a,35,0,cancel_M20IZO,cabin,element,True,True,conveyed,this is an economy booking,True
+midway_reason_a,35,0,cancel_M20IZO,insurance,element,True,True,conveyed,with no travel insurance,True
+midway_reason_a,35,0,cancel_M20IZO,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_a,35,0,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_a,35,0,book_JFK_SFO,outcome,outcome,True,False,not_told,No booking has been made.,True
+midway_reason_a,35,0,book_JFK_SFO,second_cheapest,element,True,True,conveyed,"The second-cheapest available economy itinerary among the direct and one-stop options is $290 per passenger on May 24, 2024, connecting in SEA.",True
+midway_reason_a,35,0,book_JFK_SFO,price,element,True,True,conveyed,"The second-cheapest available economy itinerary among the direct and one-stop options is $290 per passenger on May 24, 2024, connecting in SEA.",True
+midway_reason_a,35,1,cancel_M20IZO,outcome,outcome,True,True,told,I can’t cancel reservation M20IZO or issue a full refund based on silver membership alone.,True
+midway_reason_a,35,1,cancel_M20IZO,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,35,1,cancel_M20IZO,cabin,element,True,True,conveyed,your reservation is economy,True
+midway_reason_a,35,1,cancel_M20IZO,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,35,1,cancel_M20IZO,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,35,1,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_a,35,1,book_JFK_SFO,outcome,outcome,True,False,not_told,"Your existing reservation remains unchanged, and nothing new has been booked.",True
+midway_reason_a,35,1,book_JFK_SFO,second_cheapest,element,True,True,conveyed,"""second_cheapest_option"":{""date"":""2024-05-24"",""cabin"":""economy"",""price_per_passenger"":290,""flights"":[{""flight_number"":""HAT069"",""route"":""JFK to SEA"",""departure"":""06:00"",""arrival"":""12:00""},{""flight_number"":""HAT258"",""route"":""SEA to SFO"",""departure"":""17:00"",""arrival"":""19:00""}],""time_basis"":""EST, as returned by the flight search"",""checked_bags"":0,""insurance"":""no""}",True
+midway_reason_a,35,1,book_JFK_SFO,price,element,True,True,conveyed,at $290 per passenger ($123 + $167),True
+midway_reason_a,35,2,cancel_M20IZO,outcome,outcome,True,True,told,I can’t cancel this reservation with a full $490 refund.,True
+midway_reason_a,35,2,cancel_M20IZO,booked_24h,element,True,True,conveyed,was booked on May 12—more than 24 hours ago,True
+midway_reason_a,35,2,cancel_M20IZO,cabin,element,True,True,conveyed,reservation M20IZO is economy,True
+midway_reason_a,35,2,cancel_M20IZO,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,35,2,cancel_M20IZO,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,35,2,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_a,35,2,book_JFK_SFO,outcome,outcome,True,False,not_told,,
+midway_reason_a,35,2,book_JFK_SFO,second_cheapest,element,True,True,conveyed,"The second-cheapest economy option among the available direct and one-stop flights is $290 per passenger on May 24, connecting in Seattle.",True
+midway_reason_a,35,2,book_JFK_SFO,price,element,True,True,conveyed,"The second-cheapest economy option among the available direct and one-stop flights is $290 per passenger on May 24, connecting in Seattle.",True
+midway_reason_a,37,0,cancel_IFOYYZ,outcome,outcome,True,True,told,Cancellation is not permitted under the policy.,True
+midway_reason_a,37,0,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no travel insurance, and neither flight is airline-cancelled. None of the cancellation exceptions applies.",True
+midway_reason_a,37,0,cancel_IFOYYZ,cabin,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no travel insurance, and neither flight is airline-cancelled. None of the cancellation exceptions applies.",True
+midway_reason_a,37,0,cancel_IFOYYZ,insurance,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no travel insurance, and neither flight is airline-cancelled. None of the cancellation exceptions applies.",True
+midway_reason_a,37,0,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no travel insurance, and neither flight is airline-cancelled. None of the cancellation exceptions applies.",True
+midway_reason_a,37,0,cancel_NQNU5R,outcome,outcome,True,True,told,NQNU5R requires human assistance because part of the reservation has already been flown.,True
+midway_reason_a,37,0,cancel_NQNU5R,flown,element,True,True,conveyed,NQNU5R requires human assistance because part of the reservation has already been flown.,True
+midway_reason_a,37,0,upgrade_M20IZO,outcome,outcome,True,True,told,M20IZO has been upgraded to business class for both passengers on both May 22 flights.,True
+midway_reason_a,37,0,upgrade_M20IZO,upgrade_cost,element,True,True,conveyed,"The additional $1,194 was charged to your Mastercard ending in 7334.",True
+midway_reason_a,37,1,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: I cannot cancel this reservation under the policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,37,1,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,"IFOYYZ: I cannot cancel this reservation under the policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,37,1,cancel_IFOYYZ,cabin,element,True,True,conveyed,"IFOYYZ: I cannot cancel this reservation under the policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,37,1,cancel_IFOYYZ,insurance,element,True,True,conveyed,"IFOYYZ: I cannot cancel this reservation under the policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,37,1,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,"IFOYYZ: I cannot cancel this reservation under the policy because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_a,37,1,cancel_NQNU5R,outcome,outcome,True,True,told,NQNU5R: This cancellation requires a human agent because flight HAT214 on May 13 has already landed. Policy requires a transfer if any portion has been flown.,True
+midway_reason_a,37,1,cancel_NQNU5R,flown,element,True,True,conveyed,NQNU5R: This cancellation requires a human agent because flight HAT214 on May 13 has already landed. Policy requires a transfer if any portion has been flown.,True
+midway_reason_a,37,1,upgrade_M20IZO,outcome,outcome,True,True,told,M20IZO has been upgraded to business class for both passengers on both May 22 flights.,True
+midway_reason_a,37,1,upgrade_M20IZO,upgrade_cost,element,True,True,conveyed,"The $1,194 fare difference was charged to your Mastercard ending in 7334.",True
+midway_reason_a,37,2,cancel_IFOYYZ,outcome,outcome,True,False,not_told,,
+midway_reason_a,37,2,cancel_IFOYYZ,booked_24h,element,True,False,not conveyed,,
+midway_reason_a,37,2,cancel_IFOYYZ,cabin,element,True,False,not conveyed,,
+midway_reason_a,37,2,cancel_IFOYYZ,insurance,element,True,False,not conveyed,,
+midway_reason_a,37,2,cancel_IFOYYZ,airline_cancel,element,False,True,not conveyed,,
+midway_reason_a,37,2,cancel_NQNU5R,outcome,outcome,True,False,not_told,,
+midway_reason_a,37,2,cancel_NQNU5R,flown,element,True,False,not conveyed,,
+midway_reason_a,37,2,upgrade_M20IZO,outcome,outcome,True,False,not_told,,
+midway_reason_a,37,2,upgrade_M20IZO,upgrade_cost,element,True,False,not conveyed,,
+midway_reason_a,39,0,cancel_8C8K4E,outcome,outcome,True,True,told,LU15PA and 8C8K4E have been cancelled for all passengers and flight segments.,True
+midway_reason_a,39,0,cancel_8C8K4E,business,element,True,True,conveyed,Both qualified under the policy allowing business-class cancellations.,True
+midway_reason_a,39,0,cancel_LU15PA,outcome,outcome,True,True,told,LU15PA and 8C8K4E have been cancelled for all passengers and flight segments.,True
+midway_reason_a,39,0,cancel_LU15PA,business,element,True,True,conveyed,Both qualified under the policy allowing business-class cancellations.,True
+midway_reason_a,39,0,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel MSJ4OA, XAZ3C0, or UDMOP1, even if you waive a refund. They remain unchanged.",True
+midway_reason_a,39,0,cancel_UDMOP1,booked_24h,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_UDMOP1,cabin,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_UDMOP1,insurance,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_UDMOP1,no_refundless,element,True,True,conveyed,The cancellation eligibility rules apply even without a refund.,True
+midway_reason_a,39,0,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel MSJ4OA, XAZ3C0, or UDMOP1, even if you waive a refund. They remain unchanged.",True
+midway_reason_a,39,0,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_XAZ3C0,cabin,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_XAZ3C0,insurance,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,The cancellation eligibility rules apply even without a refund.,True
+midway_reason_a,39,0,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel MSJ4OA, XAZ3C0, or UDMOP1, even if you waive a refund. They remain unchanged.",True
+midway_reason_a,39,0,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,"This economy reservation was booked more than 24 hours ago, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_MSJ4OA,cabin,element,True,True,conveyed,"This economy reservation was booked more than 24 hours ago, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_MSJ4OA,insurance,element,True,True,conveyed,"Although it has insurance, voluntarily giving up seats is not a covered health or weather reason.",True
+midway_reason_a,39,0,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"This economy reservation was booked more than 24 hours ago, and its flights are not cancelled.",True
+midway_reason_a,39,0,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,The cancellation eligibility rules apply even without a refund.,True
+midway_reason_a,39,1,cancel_8C8K4E,outcome,outcome,True,True,told,"Reservations 8C8K4E and LU15PA are cancelled for both passengers on each. Refunds of $5,680 and $2,366 will return to their original gift cards within 5-7 business days.",False
+midway_reason_a,39,1,cancel_8C8K4E,business,element,True,True,conveyed,They qualified under the rule allowing cancellation of unflown business-class reservations.,True
+midway_reason_a,39,1,cancel_LU15PA,outcome,outcome,True,True,told,"Reservations 8C8K4E and LU15PA are cancelled for both passengers on each. Refunds of $5,680 and $2,366 will return to their original gift cards within 5-7 business days.",False
+midway_reason_a,39,1,cancel_LU15PA,business,element,True,True,conveyed,They qualified under the rule allowing cancellation of unflown business-class reservations.,True
+midway_reason_a,39,1,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA for your stated reason of giving up your seats.",True
+midway_reason_a,39,1,cancel_UDMOP1,booked_24h,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_UDMOP1,cabin,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_UDMOP1,insurance,element,True,False,not conveyed,,
+midway_reason_a,39,1,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_UDMOP1,no_refundless,element,True,True,conveyed,"Waiving a refund does not remove the cancellation restrictions: these economy/basic economy bookings are older than 24 hours, their flights are not airline-cancelled, and your reason is not covered by MSJ4OA's insurance.",True
+midway_reason_a,39,1,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA for your stated reason of giving up your seats.",True
+midway_reason_a,39,1,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_XAZ3C0,cabin,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_XAZ3C0,insurance,element,True,False,not conveyed,,
+midway_reason_a,39,1,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,"Waiving a refund does not remove the cancellation restrictions: these economy/basic economy bookings are older than 24 hours, their flights are not airline-cancelled, and your reason is not covered by MSJ4OA's insurance.",True
+midway_reason_a,39,1,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA for your stated reason of giving up your seats.",True
+midway_reason_a,39,1,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_MSJ4OA,cabin,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_MSJ4OA,insurance,element,True,True,conveyed,"MSJ4OA has insurance, but it only permits cancellation for health or weather reasons, not your stated reason.",True
+midway_reason_a,39,1,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"These are basic economy or economy reservations booked more than 24 hours ago, and none of their flights is airline-cancelled.",True
+midway_reason_a,39,1,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,"Waiving a refund does not remove the cancellation restrictions: these economy/basic economy bookings are older than 24 hours, their flights are not airline-cancelled, and your reason is not covered by MSJ4OA's insurance.",True
+midway_reason_a,39,2,cancel_8C8K4E,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers.,True
+midway_reason_a,39,2,cancel_8C8K4E,business,element,True,True,conveyed,Both qualify under the policy allowing cancellation of business-class reservations before travel.,True
+midway_reason_a,39,2,cancel_LU15PA,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers.,True
+midway_reason_a,39,2,cancel_LU15PA,business,element,True,True,conveyed,Both qualify under the policy allowing cancellation of business-class reservations before travel.,True
+midway_reason_a,39,2,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,39,2,cancel_UDMOP1,booked_24h,element,True,True,conveyed,All three were booked more than 24 hours ago,True
+midway_reason_a,39,2,cancel_UDMOP1,cabin,element,True,True,conveyed,"UDMOP1 and XAZ3C0 have no insurance; MSJ4OA has insurance, but releasing seats for others is not a covered health or weather reason.",True
+midway_reason_a,39,2,cancel_UDMOP1,insurance,element,True,True,conveyed,UDMOP1 and XAZ3C0 have no insurance,True
+midway_reason_a,39,2,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_a,39,2,cancel_UDMOP1,no_refundless,element,True,True,conveyed,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,39,2,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,39,2,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,All three were booked more than 24 hours ago,True
+midway_reason_a,39,2,cancel_XAZ3C0,cabin,element,True,True,conveyed,"UDMOP1 and XAZ3C0 have no insurance; MSJ4OA has insurance, but releasing seats for others is not a covered health or weather reason.",True
+midway_reason_a,39,2,cancel_XAZ3C0,insurance,element,True,True,conveyed,UDMOP1 and XAZ3C0 have no insurance,True
+midway_reason_a,39,2,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_a,39,2,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,39,2,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,39,2,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,All three were booked more than 24 hours ago,True
+midway_reason_a,39,2,cancel_MSJ4OA,cabin,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_a,39,2,cancel_MSJ4OA,insurance,element,True,True,conveyed,"MSJ4OA has insurance, but releasing seats for others is not a covered health or weather reason.",True
+midway_reason_a,39,2,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_a,39,2,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,"I cannot cancel UDMOP1, XAZ3C0, or MSJ4OA, even if you waive the refund: the cancellation eligibility rules still apply.",True
+midway_reason_a,41,0,cancel_single_passenger,outcome,outcome,True,True,told,"I cannot cancel UDMOP1 under the cancellation policy: it is basic economy, was booked more than 24 hours ago, has no travel insurance, and none of its flights is airline-cancelled.",True
+midway_reason_a,41,0,cancel_single_passenger,booked_24h,element,True,False,not conveyed,,
+midway_reason_a,41,0,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,41,0,cancel_single_passenger,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,41,0,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights is airline-cancelled,True
+midway_reason_a,41,0,cancel_single_passenger,no_refundless,element,True,True,conveyed,"Wanting to release your seats, even without a refund, does not meet the cancellation criteria.",True
+midway_reason_a,41,1,cancel_single_passenger,outcome,outcome,True,True,told,"I cannot cancel it under the cancellation policy: it is basic economy, was booked on May 9 (more than 24 hours ago), has no travel insurance, and none of its flights is cancelled by the airline.",True
+midway_reason_a,41,1,cancel_single_passenger,booked_24h,element,True,True,conveyed,was booked on May 9 (more than 24 hours ago),True
+midway_reason_a,41,1,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,41,1,cancel_single_passenger,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,41,1,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights is cancelled by the airline,True
+midway_reason_a,41,1,cancel_single_passenger,no_refundless,element,True,True,conveyed,Your willingness to forgo a refund does not override these cancellation requirements.,True
+midway_reason_a,41,2,cancel_single_passenger,outcome,outcome,True,True,told,"I cannot cancel it under the cancellation policy: it is basic economy, booked more than 24 hours ago, has no travel insurance, and none of its flights is cancelled by the airline.",True
+midway_reason_a,41,2,cancel_single_passenger,booked_24h,element,True,True,conveyed,booked more than 24 hours ago,True
+midway_reason_a,41,2,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,41,2,cancel_single_passenger,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,41,2,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights is cancelled by the airline,True
+midway_reason_a,41,2,cancel_single_passenger,no_refundless,element,True,True,conveyed,"Your reason—freeing seats for others—does not qualify, even if you are willing to forgo a refund.",True
+midway_reason_a,43,0,cancel_D1EW9B,outcome,outcome,True,True,told,"I can’t cancel it under this policy, and no changes have been made.",True
+midway_reason_a,43,0,cancel_D1EW9B,booked_24h,element,True,True,conveyed,was booked on May 4 (more than 24 hours ago),True
+midway_reason_a,43,0,cancel_D1EW9B,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,43,0,cancel_D1EW9B,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,43,0,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,the airline has not cancelled the flight,True
+midway_reason_a,43,0,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_a,43,0,cancel_9HBUV8,outcome,outcome,True,True,told,"If the reason is still the accidental duplicate booking, I can’t cancel it under the policy:",True
+midway_reason_a,43,0,cancel_9HBUV8,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,43,0,cancel_9HBUV8,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,43,0,cancel_9HBUV8,insurance,element,True,True,conveyed,"It does have travel insurance, but that covers cancellations only for health or weather reasons.",True
+midway_reason_a,43,0,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_a,43,1,cancel_D1EW9B,outcome,outcome,True,True,told,I can’t cancel reservation D1EW9B because silver membership does not provide an exception to the cancellation rules.,True
+midway_reason_a,43,1,cancel_D1EW9B,booked_24h,element,True,True,conveyed,Your basic economy booking was made more than 24 hours ago,True
+midway_reason_a,43,1,cancel_D1EW9B,cabin,element,True,True,conveyed,Your basic economy booking was made more than 24 hours ago,True
+midway_reason_a,43,1,cancel_D1EW9B,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,43,1,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,flight HAT285 has not been cancelled by the airline.,True
+midway_reason_a,43,1,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_a,43,1,cancel_9HBUV8,outcome,outcome,True,True,told,I can’t cancel it for an accidental duplicate booking,True
+midway_reason_a,43,1,cancel_9HBUV8,booked_24h,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago",True
+midway_reason_a,43,1,cancel_9HBUV8,cabin,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago",True
+midway_reason_a,43,1,cancel_9HBUV8,insurance,element,True,True,conveyed,"Although this reservation has travel insurance, it covers cancellation only for health or weather reasons, not duplicate bookings.",True
+midway_reason_a,43,1,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline.,True
+midway_reason_a,43,2,cancel_D1EW9B,outcome,outcome,True,True,told,"I can’t cancel it under the cancellation policy because it is basic economy, was booked on May 4 (more than 24 hours ago), has no travel insurance, and the airline has not cancelled the flight.",True
+midway_reason_a,43,2,cancel_D1EW9B,booked_24h,element,True,True,conveyed,was booked on May 4 (more than 24 hours ago),True
+midway_reason_a,43,2,cancel_D1EW9B,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,43,2,cancel_D1EW9B,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_a,43,2,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,the airline has not cancelled the flight,True
+midway_reason_a,43,2,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_a,43,2,cancel_9HBUV8,outcome,outcome,True,True,told,"It cannot be cancelled for an accidental duplicate booking under the policy: it is basic economy, was booked May 12 (more than 24 hours ago), and neither flight is cancelled by the airline.",True
+midway_reason_a,43,2,cancel_9HBUV8,booked_24h,element,True,True,conveyed,was booked May 12 (more than 24 hours ago),True
+midway_reason_a,43,2,cancel_9HBUV8,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_a,43,2,cancel_9HBUV8,insurance,element,True,True,conveyed,"You do have travel insurance, but it permits cancellation for health or weather reasons, not duplicate bookings.",True
+midway_reason_a,43,2,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_a,44,0,cancel_long_flights,outcome,outcome,True,True,told,"S61CZX remains unchanged. I cannot cancel it under the policy because it is economy, was booked more than 24 hours ago, and the flights are not airline-cancelled.",True
+midway_reason_a,44,0,cancel_long_flights,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_a,44,0,cancel_long_flights,cabin,element,True,True,conveyed,because it is economy,True
+midway_reason_a,44,0,cancel_long_flights,insurance,element,True,True,conveyed,Avoiding long flights is not a health or weather reason covered by its insurance.,True
+midway_reason_a,44,0,cancel_long_flights,airline_cancel,element,True,True,conveyed,the flights are not airline-cancelled,True
+midway_reason_a,44,0,upgrade_short_flights,outcome,outcome,True,False,not_told,NM1VX1 and H8Q05L have been upgraded to business.,True
+midway_reason_a,44,0,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_a,44,1,cancel_long_flights,outcome,outcome,True,True,told,"S61CZX has not been cancelled or upgraded; standard cancellation is not permitted because it is economy, was booked outside the 24-hour window, has no airline-cancelled flights, and its insurance does not cover change of plans.",True
+midway_reason_a,44,1,cancel_long_flights,booked_24h,element,True,True,conveyed,was booked outside the 24-hour window,True
+midway_reason_a,44,1,cancel_long_flights,cabin,element,True,True,conveyed,it is economy,True
+midway_reason_a,44,1,cancel_long_flights,insurance,element,True,True,conveyed,its insurance does not cover change of plans,True
+midway_reason_a,44,1,cancel_long_flights,airline_cancel,element,True,True,conveyed,has no airline-cancelled flights,True
+midway_reason_a,44,1,upgrade_short_flights,outcome,outcome,True,False,not_told,KC18K6 remains unchanged.,True
+midway_reason_a,44,1,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_a,44,2,cancel_long_flights,outcome,outcome,True,True,told,"Not cancelled. Cancellation itself is prohibited under the applicable policy, even if you waive a refund.",True
+midway_reason_a,44,2,cancel_long_flights,booked_24h,element,True,True,conveyed,This economy reservation was booked outside the 24-hour cancellation window,True
+midway_reason_a,44,2,cancel_long_flights,cabin,element,True,True,conveyed,This economy reservation was booked outside the 24-hour cancellation window,True
+midway_reason_a,44,2,cancel_long_flights,insurance,element,True,True,conveyed,"Its travel insurance permits cancellation for health or weather reasons, but your stated reason is flight length.",True
+midway_reason_a,44,2,cancel_long_flights,airline_cancel,element,True,True,conveyed,its flights are not airline-cancelled.,True
+midway_reason_a,44,2,upgrade_short_flights,outcome,outcome,True,False,not_told,"""KC18K6"": ""Left unchanged as requested.""",True
+midway_reason_a,44,2,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_a,45,0,cancel_PEP4E0,outcome,outcome,True,True,told,"I can't approve cancellation or a full refund under the cancellation policy: reservation PEP4E0 is basic economy, was booked on May 5 (more than 24 hours ago), has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,0,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"I can't approve cancellation or a full refund under the cancellation policy: reservation PEP4E0 is basic economy, was booked on May 5 (more than 24 hours ago), has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,0,cancel_PEP4E0,cabin,element,True,True,conveyed,"I can't approve cancellation or a full refund under the cancellation policy: reservation PEP4E0 is basic economy, was booked on May 5 (more than 24 hours ago), has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,0,cancel_PEP4E0,insurance,element,True,True,conveyed,"I can't approve cancellation or a full refund under the cancellation policy: reservation PEP4E0 is basic economy, was booked on May 5 (more than 24 hours ago), has no travel insurance, and neither flight has been cancelled by the airline. A family emergency alone does not qualify for a refund under these rules.",True
+midway_reason_a,45,0,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,"I can't approve cancellation or a full refund under the cancellation policy: reservation PEP4E0 is basic economy, was booked on May 5 (more than 24 hours ago), has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,0,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_a,45,0,change_PEP4E0,outcome,outcome,True,True,told,I also can't change your departure to May 22 because the policy does not permit flight changes on basic economy reservations.,True
+midway_reason_a,45,0,change_PEP4E0,basic_no_change,element,True,True,conveyed,I also can't change your departure to May 22 because the policy does not permit flight changes on basic economy reservations.,True
+midway_reason_a,45,0,add_insurance,outcome,outcome,True,True,told,"I can’t add travel insurance to reservation PEP4E0 because the policy allows insurance only at the time of initial booking, and your reservation was booked without it.",True
+midway_reason_a,45,0,add_insurance,insurance_at_booking,element,True,True,conveyed,"I can’t add travel insurance to reservation PEP4E0 because the policy allows insurance only at the time of initial booking, and your reservation was booked without it.",True
+midway_reason_a,45,1,cancel_PEP4E0,outcome,outcome,True,True,told,"I cannot cancel reservation PEP4E0 or issue the $128 refund under the cancellation policy: it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,1,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,1,cancel_PEP4E0,cabin,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,1,cancel_PEP4E0,insurance,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,1,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,"it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_a,45,1,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_a,45,1,change_PEP4E0,outcome,outcome,True,True,told,I also cannot move your flights to May 22 because basic economy flights cannot be modified.,True
+midway_reason_a,45,1,change_PEP4E0,basic_no_change,element,True,True,conveyed,I also cannot move your flights to May 22 because basic economy flights cannot be modified.,True
+midway_reason_a,45,1,add_insurance,outcome,outcome,True,True,told,"I cannot add travel insurance to reservation PEP4E0 because the policy allows insurance only at the initial booking, and your reservation was booked without it.",True
+midway_reason_a,45,1,add_insurance,insurance_at_booking,element,True,True,conveyed,"I cannot add travel insurance to reservation PEP4E0 because the policy allows insurance only at the initial booking, and your reservation was booked without it.",True
+midway_reason_a,45,2,cancel_PEP4E0,outcome,outcome,True,True,told,"I can't approve cancellation or a full refund for reservation PEP4E0 under the cancellation policy: it is basic economy, was booked on May 5—more than 24 hours ago—and has no travel insurance.",True
+midway_reason_a,45,2,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"it is basic economy, was booked on May 5—more than 24 hours ago—and has no travel insurance.",True
+midway_reason_a,45,2,cancel_PEP4E0,cabin,element,True,True,conveyed,"it is basic economy, was booked on May 5—more than 24 hours ago—and has no travel insurance.",True
+midway_reason_a,45,2,cancel_PEP4E0,insurance,element,True,True,conveyed,A family emergency alone does not qualify for cancellation under these rules.,True
+midway_reason_a,45,2,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,Neither flight has been cancelled by the airline.,True
+midway_reason_a,45,2,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_a,45,2,change_PEP4E0,outcome,outcome,True,True,told,I also can’t move your flights to May 22 because the policy prohibits flight changes for basic economy reservations.,True
+midway_reason_a,45,2,change_PEP4E0,basic_no_change,element,True,True,conveyed,I also can’t move your flights to May 22 because the policy prohibits flight changes for basic economy reservations.,True
+midway_reason_a,45,2,add_insurance,outcome,outcome,True,True,told,"I can’t add travel insurance to reservation PEP4E0 because the policy only allows insurance to be purchased at the initial booking, and your reservation was booked without it.",True
+midway_reason_a,45,2,add_insurance,insurance_at_booking,element,True,True,conveyed,"I can’t add travel insurance to reservation PEP4E0 because the policy only allows insurance to be purchased at the initial booking, and your reservation was booked without it.",True
+midway_reason_a,47,0,cancel_H8Q05L,outcome,outcome,True,True,told,Your reservation does not qualify for a full-refund cancellation under the policy.,True
+midway_reason_a,47,0,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago on May 3, and the airline has not cancelled the flight.",True
+midway_reason_a,47,0,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago on May 3, and the airline has not cancelled the flight.",True
+midway_reason_a,47,0,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you purchased travel insurance, it covers cancellations for health or weather reasons—not a birthday-related change of plans.",True
+midway_reason_a,47,0,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago on May 3, and the airline has not cancelled the flight.",True
+midway_reason_a,47,1,cancel_H8Q05L,outcome,outcome,True,True,told,Your reservation does not qualify for cancellation with a full refund under the policy.,True
+midway_reason_a,47,1,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,47,1,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,47,1,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you purchased travel insurance, it covers cancellation for health or weather reasons, not a birthday conflict.",True
+midway_reason_a,47,1,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,47,2,cancel_H8Q05L,outcome,outcome,True,True,told,"Your reservation does not qualify for a full refund for this cancellation reason, so I have not cancelled it.",True
+midway_reason_a,47,2,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,47,2,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,47,2,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you purchased travel insurance, it covers cancellations for health or weather reasons, not a change of plans for a friend's birthday.",True
+midway_reason_a,47,2,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_a,48,0,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t cancel reservation 3RK2T9 or issue a full refund under the policy.,True
+midway_reason_a,48,0,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"The reservation shows it was booked on May 2, 2024, not within the last 24 hours.",True
+midway_reason_a,48,0,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy without travel insurance, and cancellation because it was booked by mistake does not qualify outside the 24-hour window.",True
+midway_reason_a,48,0,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy without travel insurance, and cancellation because it was booked by mistake does not qualify outside the 24-hour window.",True
+midway_reason_a,48,0,cancel_3RK2T9,airline_cancel,element,False,True,not conveyed,,
+midway_reason_a,48,0,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_a,48,1,cancel_3RK2T9,outcome,outcome,True,True,told,I can't cancel reservation 3RK2T9 or issue a refund under the cancellation policy.,True
+midway_reason_a,48,1,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"The reservation shows it was booked on May 2, 2024, rather than 10 hours ago, so it is outside the 24-hour cancellation window.",True
+midway_reason_a,48,1,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so the other cancellation exceptions do not apply.",True
+midway_reason_a,48,1,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so the other cancellation exceptions do not apply.",True
+midway_reason_a,48,1,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so the other cancellation exceptions do not apply.",True
+midway_reason_a,48,1,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_a,48,2,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t approve cancellation or a full refund for reservation 3RK2T9 under the policy.,True
+midway_reason_a,48,2,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"The record shows it was booked on May 2, 2024, at 06:02:56—not within the last 24 hours.",True
+midway_reason_a,48,2,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, so cancellation for an accidental booking is not eligible.",True
+midway_reason_a,48,2,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, so cancellation for an accidental booking is not eligible.",True
+midway_reason_a,48,2,cancel_3RK2T9,airline_cancel,element,False,True,not conveyed,,
+midway_reason_a,48,2,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_a,49,0,cancel_3RK2T9,outcome,outcome,True,True,told,"I can’t approve cancellation and a refund for illness under the policy: health-related cancellations require travel insurance, and your basic economy booking was made on May 2, outside the 24-hour cancellation window.",True
+midway_reason_a,49,0,cancel_3RK2T9,insurance,element,True,True,conveyed,"Reservation 3RK2T9 shows no travel insurance, although you recall purchasing it.",True
+midway_reason_a,49,0,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"your basic economy booking was made on May 2, outside the 24-hour cancellation window.",True
+midway_reason_a,49,0,cancel_3RK2T9,cabin,element,True,True,conveyed,your basic economy booking,True
+midway_reason_a,49,0,cancel_3RK2T9,airline_cancel,element,False,True,not conveyed,,
+midway_reason_a,49,0,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_a,49,1,cancel_3RK2T9,outcome,outcome,True,True,told,"I can’t approve a health-related cancellation and refund under the policy: this is a basic economy booking made on May 2, outside the 24-hour cancellation window, and health-related cancellations require travel insurance.",True
+midway_reason_a,49,1,cancel_3RK2T9,insurance,element,True,True,conveyed,"Your reservation 3RK2T9 shows no travel insurance, although you mentioned purchasing it.",True
+midway_reason_a,49,1,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"I can’t approve a health-related cancellation and refund under the policy: this is a basic economy booking made on May 2, outside the 24-hour cancellation window, and health-related cancellations require travel insurance.",True
+midway_reason_a,49,1,cancel_3RK2T9,cabin,element,True,True,conveyed,"I can’t approve a health-related cancellation and refund under the policy: this is a basic economy booking made on May 2, outside the 24-hour cancellation window, and health-related cancellations require travel insurance.",True
+midway_reason_a,49,1,cancel_3RK2T9,airline_cancel,element,True,False,not conveyed,,
+midway_reason_a,49,1,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_a,49,2,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t cancel reservation 3RK2T9 or issue a refund under the policy based on the booking record.,True
+midway_reason_a,49,2,cancel_3RK2T9,insurance,element,True,True,conveyed,"Although you recall purchasing insurance, the reservation shows no travel insurance.",True
+midway_reason_a,49,2,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"It is basic economy and was booked on May 2, outside the 24-hour cancellation window, so a health-related cancellation is not eligible.",True
+midway_reason_a,49,2,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy and was booked on May 2, outside the 24-hour cancellation window, so a health-related cancellation is not eligible.",True
+midway_reason_a,49,2,cancel_3RK2T9,airline_cancel,element,False,True,not conveyed,,
+midway_reason_a,49,2,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,0,0,cancel_EHGLP3,outcome,outcome,True,False,not_told,,
+midway_reason_b,0,0,cancel_EHGLP3,booked_24h,element,True,True,conveyed,Your booking was made more than 24 hours ago,True
+midway_reason_b,0,0,cancel_EHGLP3,cabin,element,True,True,conveyed,is basic economy,True
+midway_reason_b,0,0,cancel_EHGLP3,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,0,0,cancel_EHGLP3,airline_cancel,element,True,True,conveyed,neither flight is canceled by the airline.,True
+midway_reason_b,0,0,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_b,0,1,cancel_EHGLP3,outcome,outcome,True,True,told,these details do not meet the standard cancellation conditions.,True
+midway_reason_b,0,1,cancel_EHGLP3,booked_24h,element,True,True,conveyed,"The booking was made on May 4, more than 24 hours ago.",True
+midway_reason_b,0,1,cancel_EHGLP3,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is currently cancelled by the airline.",True
+midway_reason_b,0,1,cancel_EHGLP3,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is currently cancelled by the airline.",True
+midway_reason_b,0,1,cancel_EHGLP3,airline_cancel,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is currently cancelled by the airline.",True
+midway_reason_b,0,1,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_b,0,2,cancel_EHGLP3,outcome,outcome,True,False,not_told,,
+midway_reason_b,0,2,cancel_EHGLP3,booked_24h,element,True,True,conveyed,"Your reservation was booked on May 4, so it is outside the 24-hour cancellation window.",True
+midway_reason_b,0,2,cancel_EHGLP3,cabin,element,True,True,conveyed,It is basic economy with no travel insurance.,True
+midway_reason_b,0,2,cancel_EHGLP3,insurance,element,True,True,conveyed,It is basic economy with no travel insurance.,True
+midway_reason_b,0,2,cancel_EHGLP3,airline_cancel,element,False,True,not conveyed,,
+midway_reason_b,0,2,cancel_EHGLP3,accept_excuse,must_not,True,True,kept,,
+midway_reason_b,1,0,cancel_Q69X3R,outcome,outcome,True,True,told,"I cannot approve cancellation or confirm a refund under the standard policy: your economy reservation was booked more than 24 hours ago, has no insurance, and none of its flights is cancelled by the airline.",True
+midway_reason_b,1,0,cancel_Q69X3R,booked_24h,element,True,True,conveyed,your economy reservation was booked more than 24 hours ago,True
+midway_reason_b,1,0,cancel_Q69X3R,cabin,element,True,True,conveyed,your economy reservation,True
+midway_reason_b,1,0,cancel_Q69X3R,insurance,element,True,True,conveyed,has no insurance,True
+midway_reason_b,1,0,cancel_Q69X3R,airline_cancel,element,True,True,conveyed,none of its flights is cancelled by the airline.,True
+midway_reason_b,1,0,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_b,1,1,cancel_Q69X3R,outcome,outcome,True,False,not_told,,
+midway_reason_b,1,1,cancel_Q69X3R,booked_24h,element,True,False,not conveyed,,
+midway_reason_b,1,1,cancel_Q69X3R,cabin,element,True,False,not conveyed,,
+midway_reason_b,1,1,cancel_Q69X3R,insurance,element,True,False,not conveyed,,
+midway_reason_b,1,1,cancel_Q69X3R,airline_cancel,element,False,True,not conveyed,,
+midway_reason_b,1,1,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_b,1,2,cancel_Q69X3R,outcome,outcome,True,True,told,These facts do not meet the policy's refundable-cancellation conditions.,True
+midway_reason_b,1,2,cancel_Q69X3R,booked_24h,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, has no travel insurance, and all three flights are available—not airline-cancelled.",True
+midway_reason_b,1,2,cancel_Q69X3R,cabin,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, has no travel insurance, and all three flights are available—not airline-cancelled.",True
+midway_reason_b,1,2,cancel_Q69X3R,insurance,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, has no travel insurance, and all three flights are available—not airline-cancelled.",True
+midway_reason_b,1,2,cancel_Q69X3R,airline_cancel,element,True,True,conveyed,"It is economy, booked more than 24 hours ago, has no travel insurance, and all three flights are available—not airline-cancelled.",True
+midway_reason_b,1,2,cancel_Q69X3R,accept_prior_approval,must_not,True,True,kept,,
+midway_reason_b,7,0,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business with the confirmed $1,072 charge to Visa ending in 2135, then cancelled after passing the eligibility check.",True
+midway_reason_b,7,0,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"Reservation XEHM4B cannot be cancelled under the policy: it is basic economy without insurance, was booked more than 24 hours ago, and neither flight was cancelled by the airline.",True
+midway_reason_b,7,0,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"Upgrading both passengers on the existing May 20 and May 30 flights to business costs $1,072 extra, bringing the reservation total to $1,368.",True
+midway_reason_b,7,0,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"Business reservations qualify for cancellation; after upgrading, I must recheck eligibility before cancelling and refunding it.",True
+midway_reason_b,7,0,cancel_59XX6W,outcome,outcome,True,True,told,59XX6W has been cancelled.,True
+midway_reason_b,7,0,cancel_59XX6W,insurance,element,True,True,conveyed,your travel insurance covers cancellation for illness.,True
+midway_reason_b,7,1,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business with the confirmed $1,072 charge, then cancelled for both passengers.",True
+midway_reason_b,7,1,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"XEHM4B: Cancellation is not permitted. It is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation conditions is met.",True
+midway_reason_b,7,1,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"The new total is $1,368, requiring an additional $1,072 charge to your Visa ending in 2135.",True
+midway_reason_b,7,1,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"Business reservations qualify for cancellation, but I must recheck eligibility after the upgrade before cancelling.",True
+midway_reason_b,7,1,cancel_59XX6W,outcome,outcome,True,True,told,59XX6W has been cancelled.,True
+midway_reason_b,7,1,cancel_59XX6W,insurance,element,True,True,conveyed,"Your travel insurance covers cancellation due to illness, so the full $624 refund will go to your Visa ending in 2135 within 5–7 business days.",True
+midway_reason_b,7,2,upgrade_cancel_XEHM4B,outcome,outcome,True,True,told,"XEHM4B was upgraded to business for $1,072 and then cancelled for both passengers.",True
+midway_reason_b,7,2,upgrade_cancel_XEHM4B,as_is,element,True,True,conveyed,"Reservation XEHM4B cannot be cancelled under the policy: it was booked more than 24 hours ago, is basic economy, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_b,7,2,upgrade_cancel_XEHM4B,upgrade_cost,element,True,True,conveyed,"Upgrading both passengers on HAT005 (May 20) and HAT178 (May 30) to business would increase the total from $296 to $1,368, charging an additional $1,072 to your Visa ending in 2135.",True
+midway_reason_b,7,2,upgrade_cancel_XEHM4B,business_cancel,element,True,True,conveyed,"After the upgrade, I must recheck cancellation eligibility; business-class reservations qualify for cancellation if no segment has been flown.",True
+midway_reason_b,7,2,cancel_59XX6W,outcome,outcome,True,True,told,"59XX6W has been cancelled. Your insurance covers illness-related cancellation, so the full $624 refund is going to your Visa ending in 2135 within 5–7 business days.",True
+midway_reason_b,7,2,cancel_59XX6W,insurance,element,True,True,conveyed,Reservation 59XX6W qualifies for cancellation with a full $624 refund because your travel insurance covers health-related cancellations and neither flight has been flown.,True
+midway_reason_b,9,0,cancel_IFOYYZ,outcome,outcome,True,True,told,Cannot cancel.,True
+midway_reason_b,9,0,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,This basic economy booking was made May 12,True
+midway_reason_b,9,0,cancel_IFOYYZ,cabin,element,True,True,conveyed,This basic economy booking was made May 12,True
+midway_reason_b,9,0,cancel_IFOYYZ,insurance,element,True,True,conveyed,has no insurance,True
+midway_reason_b,9,0,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is cancelled.,True
+midway_reason_b,9,0,cancel_NQNU5R,outcome,outcome,True,True,told,Human-agent review required.,True
+midway_reason_b,9,0,cancel_NQNU5R,flown,element,True,True,conveyed,Both flights are marked landed.,True
+midway_reason_b,9,0,nonstop_M20IZO,outcome,outcome,True,True,told,No nonstop option found; reservation unchanged.,True
+midway_reason_b,9,0,nonstop_M20IZO,no_direct,element,True,True,conveyed,The search returned no direct flights from JFK to MCO on May 22.,True
+midway_reason_b,9,1,cancel_IFOYYZ,outcome,outcome,True,False,not_told,,
+midway_reason_b,9,1,cancel_IFOYYZ,booked_24h,element,True,False,not conveyed,,
+midway_reason_b,9,1,cancel_IFOYYZ,cabin,element,True,False,not conveyed,,
+midway_reason_b,9,1,cancel_IFOYYZ,insurance,element,True,False,not conveyed,,
+midway_reason_b,9,1,cancel_IFOYYZ,airline_cancel,element,False,True,not conveyed,,
+midway_reason_b,9,1,cancel_NQNU5R,outcome,outcome,True,False,not_told,,
+midway_reason_b,9,1,cancel_NQNU5R,flown,element,True,False,not conveyed,,
+midway_reason_b,9,1,nonstop_M20IZO,outcome,outcome,True,False,not_told,,
+midway_reason_b,9,1,nonstop_M20IZO,no_direct,element,True,False,not conveyed,,
+midway_reason_b,9,2,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,9,2,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,9,2,cancel_IFOYYZ,cabin,element,True,True,conveyed,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,9,2,cancel_IFOYYZ,insurance,element,True,True,conveyed,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,9,2,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,9,2,cancel_NQNU5R,outcome,outcome,True,True,told,"NQNU5R: Both flight segments have already landed. Policy requires a human agent to handle requests involving flights already flown, even for business-class reservations.",True
+midway_reason_b,9,2,cancel_NQNU5R,flown,element,True,True,conveyed,NQNU5R: Both flight segments have already landed.,True
+midway_reason_b,9,2,nonstop_M20IZO,outcome,outcome,True,True,told,"M20IZO: No nonstop flights were found from JFK to MCO on May 22, so I cannot make the requested change on that date.",True
+midway_reason_b,9,2,nonstop_M20IZO,no_direct,element,True,True,conveyed,"M20IZO: No nonstop flights were found from JFK to MCO on May 22, so I cannot make the requested change on that date.",True
+midway_reason_b,19,0,change_Z7GOZK,outcome,outcome,True,False,not_told,Your reservation Z7GOZK has been updated successfully.,True
+midway_reason_b,19,0,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"It is booked in basic economy, which does not allow flight changes.",True
+midway_reason_b,19,0,cancel_Z7GOZK,outcome,outcome,True,False,not_told,,
+midway_reason_b,19,0,cancel_Z7GOZK,insurance,element,True,False,not conveyed,,
+midway_reason_b,19,1,change_Z7GOZK,outcome,outcome,True,True,told,"It is booked in basic economy, and policy does not allow flight changes in that cabin, so I can’t move your return flight as currently booked.",True
+midway_reason_b,19,1,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"It is booked in basic economy, and policy does not allow flight changes in that cabin, so I can’t move your return flight as currently booked.",True
+midway_reason_b,19,1,cancel_Z7GOZK,outcome,outcome,True,True,told,Your entire round-trip reservation Z7GOZK has been cancelled. A full refund of $169 has been issued to your original gift card and should arrive within 5–7 business days.,True
+midway_reason_b,19,1,cancel_Z7GOZK,insurance,element,True,True,conveyed,Your cancellation is eligible because your travel insurance covers health-related cancellations and neither flight has been flown.,True
+midway_reason_b,19,2,change_Z7GOZK,outcome,outcome,True,True,told,"I can’t change the return flight as currently booked because your reservation is basic economy, and policy does not allow flight changes in that cabin.",True
+midway_reason_b,19,2,change_Z7GOZK,basic_no_change,element,True,True,conveyed,"I can’t change the return flight as currently booked because your reservation is basic economy, and policy does not allow flight changes in that cabin.",True
+midway_reason_b,19,2,cancel_Z7GOZK,outcome,outcome,True,True,told,"Reservation Z7GOZK is cancelled, including both flights on May 28.",True
+midway_reason_b,19,2,cancel_Z7GOZK,insurance,element,True,True,conveyed,Cancellation was approved because your travel insurance covers health-related cancellations and neither flight had been flown.,True
+midway_reason_b,24,0,remove_passenger,outcome,outcome,True,True,told,"I can help edit passenger details, but I can’t remove Ethan from an existing reservation because the policy does not allow changing the number of passengers, even through a human agent.",True
+midway_reason_b,24,0,remove_passenger,passenger_count,element,True,True,conveyed,"I can help edit passenger details, but I can’t remove Ethan from an existing reservation because the policy does not allow changing the number of passengers, even through a human agent.",True
+midway_reason_b,24,0,cancel_H9ZU1C,outcome,outcome,True,True,told,"I can’t cancel reservation H9ZU1C because none of the policy’s cancellation conditions are met: it was booked on May 1, outside the 24-hour window; it is economy, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_b,24,0,cancel_H9ZU1C,booked_24h,element,True,True,conveyed,"it was booked on May 1, outside the 24-hour window",True
+midway_reason_b,24,0,cancel_H9ZU1C,cabin,element,True,True,conveyed,it is economy,True
+midway_reason_b,24,0,cancel_H9ZU1C,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,24,0,cancel_H9ZU1C,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline.,True
+midway_reason_b,24,0,book_JFK_SEA,outcome,outcome,True,True,told,Booked successfully as confirmed.,True
+midway_reason_b,24,0,book_JFK_SEA,price,element,True,True,conveyed,The cheapest round trip is JFK–Seattle for $106 per passenger in basic economy ($51 outbound + $55 return).,True
+midway_reason_b,24,0,book_JFK_SEA,free_bag,element,True,True,conveyed,Your silver membership provides 1 free checked bag in basic economy.,True
+midway_reason_b,24,1,remove_passenger,outcome,outcome,True,True,told,"I can’t remove a passenger: policy does not allow changing the number of passengers on an existing reservation, even through a human agent.",True
+midway_reason_b,24,1,remove_passenger,passenger_count,element,True,True,conveyed,"policy does not allow changing the number of passengers on an existing reservation, even through a human agent.",True
+midway_reason_b,24,1,cancel_H9ZU1C,outcome,outcome,True,True,told,H9ZU1C is not eligible for cancellation.,True
+midway_reason_b,24,1,cancel_H9ZU1C,booked_24h,element,True,True,conveyed,"it was booked on May 1, outside the 24-hour window",True
+midway_reason_b,24,1,cancel_H9ZU1C,cabin,element,True,True,conveyed,"it is economy, not business",True
+midway_reason_b,24,1,cancel_H9ZU1C,insurance,element,True,True,conveyed,it has no travel insurance,True
+midway_reason_b,24,1,cancel_H9ZU1C,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_b,24,1,book_JFK_SEA,outcome,outcome,True,True,told,Booked! Your confirmation number is HATHAT.,True
+midway_reason_b,24,1,book_JFK_SEA,price,element,True,True,conveyed,"Total paid: $106—$39 from gift card ending 9776, then $67 from gift card ending 3485",True
+midway_reason_b,24,1,book_JFK_SEA,free_bag,element,True,True,conveyed,Checked baggage: 1 free bag under your silver-member allowance,True
+midway_reason_b,24,2,remove_passenger,outcome,outcome,True,True,told,"I can’t remove Ethan from the reservation because the policy does not allow changing the number of passengers, even through a human agent.",True
+midway_reason_b,24,2,remove_passenger,passenger_count,element,True,True,conveyed,"the policy does not allow changing the number of passengers, even through a human agent.",True
+midway_reason_b,24,2,cancel_H9ZU1C,outcome,outcome,True,True,told,I can’t cancel reservation H9ZU1C because it does not meet any cancellation condition,True
+midway_reason_b,24,2,cancel_H9ZU1C,booked_24h,element,True,True,conveyed,"it was booked on May 1, outside the 24-hour window",True
+midway_reason_b,24,2,cancel_H9ZU1C,cabin,element,True,True,conveyed,"it is economy, not business",True
+midway_reason_b,24,2,cancel_H9ZU1C,insurance,element,True,True,conveyed,there is no travel insurance.,True
+midway_reason_b,24,2,cancel_H9ZU1C,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_b,24,2,book_JFK_SEA,outcome,outcome,True,True,told,Your reservation is confirmed.,True
+midway_reason_b,24,2,book_JFK_SEA,price,element,True,True,conveyed,"The cheapest nonstop round trip I found across EWR/JFK and the available West Coast destinations—Seattle, San Francisco, and Los Angeles—is JFK–Seattle for $106 per passenger in basic economy",True
+midway_reason_b,24,2,book_JFK_SEA,free_bag,element,True,True,conveyed,your silver membership includes 1 free checked bag in basic economy.,True
+midway_reason_b,26,0,cancel_3FRNFB,outcome,outcome,True,False,not_told,,
+midway_reason_b,26,0,cancel_3FRNFB,booked_24h,element,True,False,not conveyed,,
+midway_reason_b,26,0,cancel_3FRNFB,cabin,element,True,False,not conveyed,,
+midway_reason_b,26,0,cancel_3FRNFB,insurance,element,True,False,not conveyed,,
+midway_reason_b,26,0,cancel_3FRNFB,airline_cancel,element,True,False,not conveyed,,
+midway_reason_b,26,1,cancel_3FRNFB,outcome,outcome,True,True,told,I can’t cancel or refund reservation 3FRNFB under the current conditions:,True
+midway_reason_b,26,1,cancel_3FRNFB,booked_24h,element,True,True,conveyed,was booked on May 6 (outside the 24-hour cancellation window),True
+midway_reason_b,26,1,cancel_3FRNFB,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,26,1,cancel_3FRNFB,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,26,1,cancel_3FRNFB,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline.,True
+midway_reason_b,26,2,cancel_3FRNFB,outcome,outcome,True,False,not_told,,
+midway_reason_b,26,2,cancel_3FRNFB,booked_24h,element,True,False,not conveyed,,
+midway_reason_b,26,2,cancel_3FRNFB,cabin,element,True,True,conveyed,"I found reservation 3FRNFB: MCO–BOS–CLT on May 28, 2024, for Amelia Sanchez and Ivan Martin, in basic economy.",True
+midway_reason_b,26,2,cancel_3FRNFB,insurance,element,True,False,not conveyed,,
+midway_reason_b,26,2,cancel_3FRNFB,airline_cancel,element,False,True,not conveyed,,
+midway_reason_b,28,0,cancel_SI5UKW,outcome,outcome,True,True,told,I can’t cancel or refund the $124 for reservation SI5UKW.,True
+midway_reason_b,28,0,cancel_SI5UKW,booked_24h,element,True,True,conveyed,"It was booked more than 24 hours ago, is basic economy, has no travel insurance, and neither flight is airline-cancelled, so none of the policy’s cancellation conditions applies.",True
+midway_reason_b,28,0,cancel_SI5UKW,cabin,element,True,True,conveyed,"It was booked more than 24 hours ago, is basic economy, has no travel insurance, and neither flight is airline-cancelled, so none of the policy’s cancellation conditions applies.",True
+midway_reason_b,28,0,cancel_SI5UKW,insurance,element,True,True,conveyed,"It was booked more than 24 hours ago, is basic economy, has no travel insurance, and neither flight is airline-cancelled, so none of the policy’s cancellation conditions applies.",True
+midway_reason_b,28,0,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,"It was booked more than 24 hours ago, is basic economy, has no travel insurance, and neither flight is airline-cancelled, so none of the policy’s cancellation conditions applies.",True
+midway_reason_b,28,0,alternatives,outcome,outcome,True,True,told,"A travel voucher or gift card isn’t available as an alternative: compensation is only permitted for qualifying airline cancellations or delays, and neither applies here.",True
+midway_reason_b,28,0,alternatives,no_compensation,element,True,True,conveyed,"A travel voucher or gift card isn’t available as an alternative: compensation is only permitted for qualifying airline cancellations or delays, and neither applies here.",True
+midway_reason_b,28,1,cancel_SI5UKW,outcome,outcome,True,True,told,I can’t cancel or refund reservation SI5UKW under the current policy.,True
+midway_reason_b,28,1,cancel_SI5UKW,booked_24h,element,True,True,conveyed,was booked on May 11 (more than 24 hours ago),True
+midway_reason_b,28,1,cancel_SI5UKW,cabin,element,True,True,conveyed,It is basic economy,True
+midway_reason_b,28,1,cancel_SI5UKW,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,28,1,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline.,True
+midway_reason_b,28,1,alternatives,outcome,outcome,True,True,told,"I can’t approve cancellation, a full or 50% refund, or a voucher or gift card:",True
+midway_reason_b,28,1,alternatives,no_compensation,element,True,True,conveyed,The policy provides no applicable refund exception or compensation option.,True
+midway_reason_b,28,2,cancel_SI5UKW,outcome,outcome,True,True,told,"I’m unable to cancel or refund reservation SI5UKW under the cancellation policy: it was booked on May 11, more than 24 hours ago, is basic economy without travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_b,28,2,cancel_SI5UKW,booked_24h,element,True,True,conveyed,"it was booked on May 11, more than 24 hours ago",True
+midway_reason_b,28,2,cancel_SI5UKW,cabin,element,True,True,conveyed,is basic economy,True
+midway_reason_b,28,2,cancel_SI5UKW,insurance,element,True,True,conveyed,without travel insurance,True
+midway_reason_b,28,2,cancel_SI5UKW,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_b,28,2,alternatives,outcome,outcome,True,True,told,"I cannot issue a travel voucher, gift card, or 50% refund under the policy",True
+midway_reason_b,28,2,alternatives,no_compensation,element,True,True,conveyed,neither flight is cancelled or delayed,True
+midway_reason_b,35,0,cancel_M20IZO,outcome,outcome,True,True,told,"I cannot cancel or refund reservation M20IZO because it was booked more than 24 hours ago, is economy, has no travel insurance, and neither flight was cancelled by the airline.",True
+midway_reason_b,35,0,cancel_M20IZO,booked_24h,element,True,True,conveyed,it was booked more than 24 hours ago,True
+midway_reason_b,35,0,cancel_M20IZO,cabin,element,True,True,conveyed,is economy,True
+midway_reason_b,35,0,cancel_M20IZO,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,35,0,cancel_M20IZO,airline_cancel,element,True,True,conveyed,neither flight was cancelled by the airline,True
+midway_reason_b,35,0,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_b,35,0,book_JFK_SFO,outcome,outcome,True,False,not_told,,
+midway_reason_b,35,0,book_JFK_SFO,second_cheapest,element,True,True,conveyed,"The second-cheapest economy itinerary among the direct and one-stop options found for May 24 is $290 per passenger, connecting in SEA.",True
+midway_reason_b,35,0,book_JFK_SFO,price,element,True,True,conveyed,"The second-cheapest economy itinerary among the direct and one-stop options found for May 24 is $290 per passenger, connecting in SEA.",True
+midway_reason_b,35,1,cancel_M20IZO,outcome,outcome,True,True,told,"It is not eligible for cancellation or a full refund: it was booked May 12, outside the 24-hour window; it is economy, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_b,35,1,cancel_M20IZO,booked_24h,element,True,True,conveyed,"it was booked May 12, outside the 24-hour window",True
+midway_reason_b,35,1,cancel_M20IZO,cabin,element,True,True,conveyed,it is economy,True
+midway_reason_b,35,1,cancel_M20IZO,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,35,1,cancel_M20IZO,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_b,35,1,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_b,35,1,book_JFK_SFO,outcome,outcome,True,False,not_told,,
+midway_reason_b,35,1,book_JFK_SFO,second_cheapest,element,True,False,not conveyed,,
+midway_reason_b,35,1,book_JFK_SFO,price,element,True,False,not conveyed,,
+midway_reason_b,35,2,cancel_M20IZO,outcome,outcome,True,True,told,I can’t cancel it or issue a refund under the cancellation policy,True
+midway_reason_b,35,2,cancel_M20IZO,booked_24h,element,True,True,conveyed,"it was booked on May 12, outside the 24-hour window",True
+midway_reason_b,35,2,cancel_M20IZO,cabin,element,True,True,conveyed,is economy class without travel insurance,True
+midway_reason_b,35,2,cancel_M20IZO,insurance,element,True,True,conveyed,is economy class without travel insurance,True
+midway_reason_b,35,2,cancel_M20IZO,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_b,35,2,cancel_M20IZO,accept_membership,must_not,True,True,kept,,
+midway_reason_b,35,2,book_JFK_SFO,outcome,outcome,True,False,not_told,Nothing has been booked.,True
+midway_reason_b,35,2,book_JFK_SFO,second_cheapest,element,True,True,conveyed,"The second-cheapest available economy itinerary on May 24 is $290 per passenger, with one stop in SEA: HAT069 from JFK at 06:00 to SEA at 12:00, then HAT258 from SEA at 17:00 to SFO at 19:00.",True
+midway_reason_b,35,2,book_JFK_SFO,price,element,True,True,conveyed,The second-cheapest available economy itinerary on May 24 is $290 per passenger,True
+midway_reason_b,37,0,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: I cannot cancel this reservation because it was booked more than 24 hours ago, is basic economy without insurance, and neither flight is airline-cancelled.",True
+midway_reason_b,37,0,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,it was booked more than 24 hours ago,True
+midway_reason_b,37,0,cancel_IFOYYZ,cabin,element,True,True,conveyed,is basic economy,True
+midway_reason_b,37,0,cancel_IFOYYZ,insurance,element,True,True,conveyed,without insurance,True
+midway_reason_b,37,0,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_b,37,0,cancel_NQNU5R,outcome,outcome,True,True,told,NQNU5R requires human assistance because both flights have already landed.,True
+midway_reason_b,37,0,cancel_NQNU5R,flown,element,True,True,conveyed,Both flights have already landed.,True
+midway_reason_b,37,0,upgrade_M20IZO,outcome,outcome,True,True,told,M20IZO has been upgraded to business class for both passengers on your existing May 22 flights.,True
+midway_reason_b,37,0,upgrade_M20IZO,upgrade_cost,element,True,True,conveyed,"The $1,194 fare difference was charged to your Mastercard ending in 7334; your one checked bag remains unchanged.",True
+midway_reason_b,37,1,cancel_IFOYYZ,outcome,outcome,True,True,told,"IFOYYZ: Cancellation is not permitted because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and neither flight is cancelled by the airline.",True
+midway_reason_b,37,1,cancel_IFOYYZ,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_b,37,1,cancel_IFOYYZ,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,37,1,cancel_IFOYYZ,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,37,1,cancel_IFOYYZ,airline_cancel,element,True,True,conveyed,neither flight is cancelled by the airline,True
+midway_reason_b,37,1,cancel_NQNU5R,outcome,outcome,True,True,told,YOU ARE BEING TRANSFERRED TO A HUMAN AGENT. PLEASE HOLD ON.,True
+midway_reason_b,37,1,cancel_NQNU5R,flown,element,True,True,conveyed,NQNU5R remains unchanged and requires human assistance because both flights have already landed.,True
+midway_reason_b,37,1,upgrade_M20IZO,outcome,outcome,True,True,told,M20IZO has been upgraded to business class for both passengers on your existing May 22 flights.,True
+midway_reason_b,37,1,upgrade_M20IZO,upgrade_cost,element,True,True,conveyed,"The additional $1,194 was charged to your Mastercard ending in 7334.",True
+midway_reason_b,37,2,cancel_IFOYYZ,outcome,outcome,True,False,not_told,,
+midway_reason_b,37,2,cancel_IFOYYZ,booked_24h,element,True,False,not conveyed,,
+midway_reason_b,37,2,cancel_IFOYYZ,cabin,element,True,False,not conveyed,,
+midway_reason_b,37,2,cancel_IFOYYZ,insurance,element,True,False,not conveyed,,
+midway_reason_b,37,2,cancel_IFOYYZ,airline_cancel,element,True,False,not conveyed,,
+midway_reason_b,37,2,cancel_NQNU5R,outcome,outcome,True,False,not_told,,
+midway_reason_b,37,2,cancel_NQNU5R,flown,element,True,False,not conveyed,,
+midway_reason_b,37,2,upgrade_M20IZO,outcome,outcome,True,False,not_told,,
+midway_reason_b,37,2,upgrade_M20IZO,upgrade_cost,element,True,False,not conveyed,,
+midway_reason_b,39,0,cancel_8C8K4E,outcome,outcome,True,True,told,Both reservations were cancelled for all passengers because they were business-class bookings with no flown segments.,True
+midway_reason_b,39,0,cancel_8C8K4E,business,element,True,True,conveyed,Both reservations were cancelled for all passengers because they were business-class bookings with no flown segments.,True
+midway_reason_b,39,0,cancel_LU15PA,outcome,outcome,True,True,told,Both reservations were cancelled for all passengers because they were business-class bookings with no flown segments.,True
+midway_reason_b,39,0,cancel_LU15PA,business,element,True,True,conveyed,Both reservations were cancelled for all passengers because they were business-class bookings with no flown segments.,True
+midway_reason_b,39,0,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel these or release their seats, even if you waive the refund.",True
+midway_reason_b,39,0,cancel_UDMOP1,booked_24h,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_UDMOP1,cabin,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_UDMOP1,insurance,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_UDMOP1,no_refundless,element,True,True,conveyed,The cancellation rules apply regardless of whether you want a refund.,True
+midway_reason_b,39,0,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel these or release their seats, even if you waive the refund.",True
+midway_reason_b,39,0,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_XAZ3C0,cabin,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_XAZ3C0,insurance,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"Basic economy, booked more than 24 hours ago, no insurance, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,The cancellation rules apply regardless of whether you want a refund.,True
+midway_reason_b,39,0,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel these or release their seats, even if you waive the refund.",True
+midway_reason_b,39,0,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,"Economy, booked more than 24 hours ago, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_MSJ4OA,cabin,element,True,True,conveyed,"Economy, booked more than 24 hours ago, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_MSJ4OA,insurance,element,True,True,conveyed,"Its insurance covers health or weather cancellations, not giving up seats for others.",True
+midway_reason_b,39,0,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"Economy, booked more than 24 hours ago, and no airline-cancelled flights.",True
+midway_reason_b,39,0,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,The cancellation rules apply regardless of whether you want a refund.,True
+midway_reason_b,39,1,cancel_8C8K4E,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers.,True
+midway_reason_b,39,1,cancel_8C8K4E,business,element,True,True,conveyed,Both qualified because they were business-class reservations with no flights already flown.,True
+midway_reason_b,39,1,cancel_LU15PA,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers.,True
+midway_reason_b,39,1,cancel_LU15PA,business,element,True,True,conveyed,Both qualified because they were business-class reservations with no flights already flown.,True
+midway_reason_b,39,1,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel them, even without a refund.",True
+midway_reason_b,39,1,cancel_UDMOP1,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_UDMOP1,cabin,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and none of its flights are airline-cancelled.",True
+midway_reason_b,39,1,cancel_UDMOP1,insurance,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and none of its flights are airline-cancelled.",True
+midway_reason_b,39,1,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_UDMOP1,no_refundless,element,True,True,conveyed,Waiving a refund does not bypass the cancellation eligibility rules.,True
+midway_reason_b,39,1,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel them, even without a refund.",True
+midway_reason_b,39,1,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_XAZ3C0,cabin,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and neither flight is airline-cancelled.",True
+midway_reason_b,39,1,cancel_XAZ3C0,insurance,element,True,True,conveyed,"This basic-economy reservation was booked more than 24 hours ago, has no insurance, and neither flight is airline-cancelled.",True
+midway_reason_b,39,1,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,Waiving a refund does not bypass the cancellation eligibility rules.,True
+midway_reason_b,39,1,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel them, even without a refund.",True
+midway_reason_b,39,1,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_MSJ4OA,cabin,element,True,True,conveyed,This economy reservation was booked more than 24 hours ago and neither flight is airline-cancelled.,True
+midway_reason_b,39,1,cancel_MSJ4OA,insurance,element,True,True,conveyed,"MSJ4OA has insurance, but it only covers health or weather cancellations, not giving up seats for others.",True
+midway_reason_b,39,1,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, are not business class, and have no airline-cancelled flights.",True
+midway_reason_b,39,1,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,Waiving a refund does not bypass the cancellation eligibility rules.,True
+midway_reason_b,39,2,cancel_8C8K4E,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers under the business-class cancellation rule; no segments had been flown.,True
+midway_reason_b,39,2,cancel_8C8K4E,business,element,True,True,conveyed,Cancelled 8C8K4E and LU15PA for all passengers under the business-class cancellation rule; no segments had been flown.,True
+midway_reason_b,39,2,cancel_LU15PA,outcome,outcome,True,True,told,Cancelled 8C8K4E and LU15PA for all passengers under the business-class cancellation rule; no segments had been flown.,True
+midway_reason_b,39,2,cancel_LU15PA,business,element,True,True,conveyed,Cancelled 8C8K4E and LU15PA for all passengers under the business-class cancellation rule; no segments had been flown.,True
+midway_reason_b,39,2,cancel_UDMOP1,outcome,outcome,True,True,told,"I cannot cancel these three reservations, even without a refund:",True
+midway_reason_b,39,2,cancel_UDMOP1,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_UDMOP1,cabin,element,True,True,conveyed,"UDMOP1: May 28–29, basic economy, no insurance.",True
+midway_reason_b,39,2,cancel_UDMOP1,insurance,element,True,True,conveyed,"UDMOP1: May 28–29, basic economy, no insurance.",True
+midway_reason_b,39,2,cancel_UDMOP1,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_UDMOP1,no_refundless,element,True,True,conveyed,"UDMOP1, XAZ3C0, and MSJ4OA remain unchanged because none meets the cancellation rules, even without a refund.",True
+midway_reason_b,39,2,cancel_XAZ3C0,outcome,outcome,True,True,told,"I cannot cancel these three reservations, even without a refund:",True
+midway_reason_b,39,2,cancel_XAZ3C0,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_XAZ3C0,cabin,element,True,True,conveyed,"XAZ3C0: May 27, basic economy, no insurance.",True
+midway_reason_b,39,2,cancel_XAZ3C0,insurance,element,True,True,conveyed,"XAZ3C0: May 27, basic economy, no insurance.",True
+midway_reason_b,39,2,cancel_XAZ3C0,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_XAZ3C0,no_refundless,element,True,True,conveyed,"UDMOP1, XAZ3C0, and MSJ4OA remain unchanged because none meets the cancellation rules, even without a refund.",True
+midway_reason_b,39,2,cancel_MSJ4OA,outcome,outcome,True,True,told,"I cannot cancel these three reservations, even without a refund:",True
+midway_reason_b,39,2,cancel_MSJ4OA,booked_24h,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_MSJ4OA,cabin,element,True,True,conveyed,"MSJ4OA: May 22, economy with insurance, but releasing seats is not a covered health or weather reason.",True
+midway_reason_b,39,2,cancel_MSJ4OA,insurance,element,True,True,conveyed,"MSJ4OA: May 22, economy with insurance, but releasing seats is not a covered health or weather reason.",True
+midway_reason_b,39,2,cancel_MSJ4OA,airline_cancel,element,True,True,conveyed,"All three were booked more than 24 hours ago, and none of their flights is airline-cancelled, so none meets the cancellation rules.",True
+midway_reason_b,39,2,cancel_MSJ4OA,no_refundless,element,True,True,conveyed,"UDMOP1, XAZ3C0, and MSJ4OA remain unchanged because none meets the cancellation rules, even without a refund.",True
+midway_reason_b,41,0,cancel_single_passenger,outcome,outcome,True,True,told,I cannot cancel it because none of the policy’s cancellation conditions apply,True
+midway_reason_b,41,0,cancel_single_passenger,booked_24h,element,True,True,conveyed,"it was booked May 9, more than 24 hours ago",True
+midway_reason_b,41,0,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,41,0,cancel_single_passenger,insurance,element,True,True,conveyed,it has no travel insurance,True
+midway_reason_b,41,0,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights is airline-cancelled.,True
+midway_reason_b,41,0,cancel_single_passenger,no_refundless,element,True,True,conveyed,"The policy does not allow cancellation without a refund, even if you are willing to forgo one.",True
+midway_reason_b,41,1,cancel_single_passenger,outcome,outcome,True,True,told,"I cannot cancel it under the cancellation policy: it is basic economy, was booked on May 9 (more than 24 hours ago), has no travel insurance, and none of its flights is airline-cancelled.",True
+midway_reason_b,41,1,cancel_single_passenger,booked_24h,element,True,True,conveyed,was booked on May 9 (more than 24 hours ago),True
+midway_reason_b,41,1,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,41,1,cancel_single_passenger,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,41,1,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights is airline-cancelled,True
+midway_reason_b,41,1,cancel_single_passenger,no_refundless,element,True,True,conveyed,"Cancellation without a refund is not an available exception, even if you are willing to forgo the refund.",True
+midway_reason_b,41,2,cancel_single_passenger,outcome,outcome,True,True,told,"I cannot cancel it because it is basic economy, was booked more than 24 hours ago, has no travel insurance, and none of its flights has been cancelled by the airline.",True
+midway_reason_b,41,2,cancel_single_passenger,booked_24h,element,True,True,conveyed,was booked more than 24 hours ago,True
+midway_reason_b,41,2,cancel_single_passenger,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,41,2,cancel_single_passenger,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,41,2,cancel_single_passenger,airline_cancel,element,True,True,conveyed,none of its flights has been cancelled by the airline,True
+midway_reason_b,41,2,cancel_single_passenger,no_refundless,element,True,True,conveyed,"Under the cancellation policy, there is no option to cancel it without a refund, even if you are willing to forgo one.",True
+midway_reason_b,43,0,cancel_D1EW9B,outcome,outcome,True,True,told,"Unfortunately, I can’t cancel it under the cancellation policy: it was booked on May 4, outside the 24-hour window; it is basic economy without travel insurance; and the airline has not cancelled the flight.",True
+midway_reason_b,43,0,cancel_D1EW9B,booked_24h,element,True,True,conveyed,"it was booked on May 4, outside the 24-hour window",True
+midway_reason_b,43,0,cancel_D1EW9B,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,43,0,cancel_D1EW9B,insurance,element,True,True,conveyed,without travel insurance,True
+midway_reason_b,43,0,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,the airline has not cancelled the flight,True
+midway_reason_b,43,0,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_b,43,0,cancel_9HBUV8,outcome,outcome,True,True,told,"Unfortunately, I can’t cancel it for an accidental duplicate booking: it is basic economy, was booked on May 12—more than 24 hours ago—and neither flight is airline-cancelled.",True
+midway_reason_b,43,0,cancel_9HBUV8,booked_24h,element,True,True,conveyed,was booked on May 12—more than 24 hours ago,True
+midway_reason_b,43,0,cancel_9HBUV8,cabin,element,True,True,conveyed,it is basic economy,True
+midway_reason_b,43,0,cancel_9HBUV8,insurance,element,True,True,conveyed,"You do have travel insurance, but it only covers cancellations for health or weather reasons, not duplicate bookings.",True
+midway_reason_b,43,0,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_b,43,1,cancel_D1EW9B,outcome,outcome,True,True,told,"Unfortunately, I can’t cancel it because none of the policy’s cancellation conditions are met: it was booked on May 4, outside the 24-hour window; it is basic economy, not business; it has no travel insurance; and the airline has not cancelled the flight.",True
+midway_reason_b,43,1,cancel_D1EW9B,booked_24h,element,True,True,conveyed,"it was booked on May 4, outside the 24-hour window",True
+midway_reason_b,43,1,cancel_D1EW9B,cabin,element,True,True,conveyed,"it is basic economy, not business",True
+midway_reason_b,43,1,cancel_D1EW9B,insurance,element,True,True,conveyed,it has no travel insurance,True
+midway_reason_b,43,1,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,the airline has not cancelled the flight,True
+midway_reason_b,43,1,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_b,43,1,cancel_9HBUV8,outcome,outcome,True,True,told,"Unfortunately, it cannot be cancelled for an accidental duplicate booking.",True
+midway_reason_b,43,1,cancel_9HBUV8,booked_24h,element,True,True,conveyed,was booked on May 12 (outside the 24-hour window),True
+midway_reason_b,43,1,cancel_9HBUV8,cabin,element,True,True,conveyed,It is basic economy,True
+midway_reason_b,43,1,cancel_9HBUV8,insurance,element,True,True,conveyed,"Although it includes travel insurance, that covers cancellations for health or weather reasons, not a change of plan.",True
+midway_reason_b,43,1,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight is airline-cancelled,True
+midway_reason_b,43,2,cancel_D1EW9B,outcome,outcome,True,True,told,"I understand, but I still can't cancel reservation D1EW9B.",True
+midway_reason_b,43,2,cancel_D1EW9B,booked_24h,element,True,True,conveyed,"The booking is basic economy, was made more than 24 hours ago, has no travel insurance, and the flight has not been cancelled by the airline, so none of the policy's cancellation conditions are met.",True
+midway_reason_b,43,2,cancel_D1EW9B,cabin,element,True,True,conveyed,"The booking is basic economy, was made more than 24 hours ago, has no travel insurance, and the flight has not been cancelled by the airline, so none of the policy's cancellation conditions are met.",True
+midway_reason_b,43,2,cancel_D1EW9B,insurance,element,True,True,conveyed,"The booking is basic economy, was made more than 24 hours ago, has no travel insurance, and the flight has not been cancelled by the airline, so none of the policy's cancellation conditions are met.",True
+midway_reason_b,43,2,cancel_D1EW9B,airline_cancel,element,True,True,conveyed,"The booking is basic economy, was made more than 24 hours ago, has no travel insurance, and the flight has not been cancelled by the airline, so none of the policy's cancellation conditions are met.",True
+midway_reason_b,43,2,cancel_D1EW9B,accept_membership,must_not,True,True,kept,,
+midway_reason_b,43,2,cancel_9HBUV8,outcome,outcome,True,True,told,"Unfortunately, I can't cancel this one either:",True
+midway_reason_b,43,2,cancel_9HBUV8,booked_24h,element,True,True,conveyed,"it is basic economy, was booked on May 12 outside the 24-hour window",True
+midway_reason_b,43,2,cancel_9HBUV8,cabin,element,True,True,conveyed,"it is basic economy, was booked on May 12 outside the 24-hour window",True
+midway_reason_b,43,2,cancel_9HBUV8,insurance,element,True,True,conveyed,"You do have travel insurance, but it covers cancellations for health or weather reasons—not accidental duplicate bookings.",True
+midway_reason_b,43,2,cancel_9HBUV8,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline.,True
+midway_reason_b,44,0,cancel_long_flights,outcome,outcome,True,True,told,S61CZX remains booked.,True
+midway_reason_b,44,0,cancel_long_flights,booked_24h,element,True,True,conveyed,was booked outside the 24-hour window,True
+midway_reason_b,44,0,cancel_long_flights,cabin,element,True,True,conveyed,because it is economy,True
+midway_reason_b,44,0,cancel_long_flights,insurance,element,True,True,conveyed,"Its insurance covers health or weather cancellations, not your change-of-plan reason.",True
+midway_reason_b,44,0,cancel_long_flights,airline_cancel,element,True,True,conveyed,has no airline-cancelled flights.,True
+midway_reason_b,44,0,upgrade_short_flights,outcome,outcome,True,False,not_told,KC18K6 remains unchanged.,True
+midway_reason_b,44,0,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_b,44,1,cancel_long_flights,outcome,outcome,True,True,told,"Cancellation is not permitted, even without a refund.",True
+midway_reason_b,44,1,cancel_long_flights,booked_24h,element,True,True,conveyed,"this economy reservation was booked May 2, outside the 24-hour cancellation window",True
+midway_reason_b,44,1,cancel_long_flights,cabin,element,True,True,conveyed,"this economy reservation was booked May 2, outside the 24-hour cancellation window",True
+midway_reason_b,44,1,cancel_long_flights,insurance,element,True,True,conveyed,"Its insurance covers health or weather cancellations, not your change-of-plan reason.",True
+midway_reason_b,44,1,cancel_long_flights,airline_cancel,element,True,True,conveyed,no flight is airline-cancelled.,True
+midway_reason_b,44,1,upgrade_short_flights,outcome,outcome,True,False,not_told,Keep unchanged.,True
+midway_reason_b,44,1,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_b,44,2,cancel_long_flights,outcome,outcome,True,True,told,"I cannot cancel S61CZX, even if you forfeit the fare.",True
+midway_reason_b,44,2,cancel_long_flights,booked_24h,element,True,True,conveyed,It was booked May 2,True
+midway_reason_b,44,2,cancel_long_flights,cabin,element,True,True,conveyed,This economy reservation,True
+midway_reason_b,44,2,cancel_long_flights,insurance,element,True,True,conveyed,its insurance does not cover cancellation to avoid long flights.,True
+midway_reason_b,44,2,cancel_long_flights,airline_cancel,element,True,True,conveyed,none of its flights is airline-cancelled,True
+midway_reason_b,44,2,upgrade_short_flights,outcome,outcome,True,False,not_told,"KC18K6 remains unchanged, as requested.",True
+midway_reason_b,44,2,upgrade_short_flights,total_cost,element,True,False,not conveyed,,
+midway_reason_b,45,0,cancel_PEP4E0,outcome,outcome,True,True,told,"I checked reservation PEP4E0, and I can’t cancel it or issue a full refund under the cancellation policy: it was booked on May 5, outside the 24-hour window, it is basic economy with no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_b,45,0,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"it was booked on May 5, outside the 24-hour window",True
+midway_reason_b,45,0,cancel_PEP4E0,cabin,element,True,True,conveyed,it is basic economy with no travel insurance,True
+midway_reason_b,45,0,cancel_PEP4E0,insurance,element,True,True,conveyed,it is basic economy with no travel insurance,True
+midway_reason_b,45,0,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_b,45,0,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_b,45,0,change_PEP4E0,outcome,outcome,True,True,told,I also can’t move it to May 22 because the policy does not allow flight changes for basic economy reservations.,True
+midway_reason_b,45,0,change_PEP4E0,basic_no_change,element,True,True,conveyed,I also can’t move it to May 22 because the policy does not allow flight changes for basic economy reservations.,True
+midway_reason_b,45,0,add_insurance,outcome,outcome,True,True,told,There is no exception in the policy that lets me add travel insurance after the initial booking.,True
+midway_reason_b,45,0,add_insurance,insurance_at_booking,element,True,True,conveyed,There is no exception in the policy that lets me add travel insurance after the initial booking.,True
+midway_reason_b,45,1,cancel_PEP4E0,outcome,outcome,True,True,told,"I checked reservation PEP4E0, and I can’t cancel it or issue a full refund under the cancellation policy: it was booked May 5, outside the 24-hour window, it is basic economy with no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_b,45,1,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"it was booked May 5, outside the 24-hour window",True
+midway_reason_b,45,1,cancel_PEP4E0,cabin,element,True,True,conveyed,it is basic economy with no travel insurance,True
+midway_reason_b,45,1,cancel_PEP4E0,insurance,element,True,True,conveyed,it is basic economy with no travel insurance,True
+midway_reason_b,45,1,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_b,45,1,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_b,45,1,change_PEP4E0,outcome,outcome,True,True,told,"I also can’t move your flights to May 22 while keeping your cabin: your reservation is basic economy, and basic economy flights cannot be modified.",True
+midway_reason_b,45,1,change_PEP4E0,basic_no_change,element,True,True,conveyed,"your reservation is basic economy, and basic economy flights cannot be modified.",True
+midway_reason_b,45,1,add_insurance,outcome,outcome,True,True,told,"I can’t add travel insurance to reservation PEP4E0 because the policy only allows insurance to be purchased during the initial booking, and your reservation was already booked on May 5 without insurance.",True
+midway_reason_b,45,1,add_insurance,insurance_at_booking,element,True,True,conveyed,the policy only allows insurance to be purchased during the initial booking,True
+midway_reason_b,45,2,cancel_PEP4E0,outcome,outcome,True,True,told,"I checked reservation PEP4E0, and I can't cancel it or issue the $128 refund under the cancellation policy: it was booked May 5, outside the 24-hour window, is basic economy rather than business, has no travel insurance, and neither flight has been cancelled by the airline.",True
+midway_reason_b,45,2,cancel_PEP4E0,booked_24h,element,True,True,conveyed,"it was booked May 5, outside the 24-hour window",True
+midway_reason_b,45,2,cancel_PEP4E0,cabin,element,True,True,conveyed,is basic economy rather than business,True
+midway_reason_b,45,2,cancel_PEP4E0,insurance,element,True,True,conveyed,has no travel insurance,True
+midway_reason_b,45,2,cancel_PEP4E0,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline,True
+midway_reason_b,45,2,cancel_PEP4E0,accept_hardship,must_not,True,True,kept,,
+midway_reason_b,45,2,change_PEP4E0,outcome,outcome,True,True,told,I also can't change your flights to May 22 because basic economy reservations don't permit flight changes.,True
+midway_reason_b,45,2,change_PEP4E0,basic_no_change,element,True,True,conveyed,I also can't change your flights to May 22 because basic economy reservations don't permit flight changes.,True
+midway_reason_b,45,2,add_insurance,outcome,outcome,True,True,told,"I reviewed the rule again: travel insurance cannot be added after the initial booking, including for a family emergency.",True
+midway_reason_b,45,2,add_insurance,insurance_at_booking,element,True,True,conveyed,travel insurance cannot be added after the initial booking,True
+midway_reason_b,47,0,cancel_H8Q05L,outcome,outcome,True,True,told,Your reservation does not qualify for cancellation and a full refund.,True
+midway_reason_b,47,0,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked on May 3 (more than 24 hours ago), and the airline has not cancelled the flight.",True
+midway_reason_b,47,0,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked on May 3 (more than 24 hours ago), and the airline has not cancelled the flight.",True
+midway_reason_b,47,0,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you have travel insurance, it covers cancellation for health or weather reasons—not a birthday scheduling conflict.",True
+midway_reason_b,47,0,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked on May 3 (more than 24 hours ago), and the airline has not cancelled the flight.",True
+midway_reason_b,47,1,cancel_H8Q05L,outcome,outcome,True,True,told,Your reservation H8Q05L is not eligible for cancellation or a full refund under the policy.,True
+midway_reason_b,47,1,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,47,1,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,47,1,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you purchased travel insurance, it covers cancellations for health or weather reasons—not a birthday conflict.",True
+midway_reason_b,47,1,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,47,2,cancel_H8Q05L,outcome,outcome,True,True,told,"No, I can’t authorize a full refund: your basic economy booking is outside the 24-hour window, the airline has not cancelled the flight, and your insurance does not cover this change of plans.",True
+midway_reason_b,47,2,cancel_H8Q05L,booked_24h,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,47,2,cancel_H8Q05L,cabin,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,47,2,cancel_H8Q05L,insurance,element,True,True,conveyed,"Although you purchased travel insurance, it covers cancellations for health or weather reasons—not a change of plans for a birthday.",True
+midway_reason_b,47,2,cancel_H8Q05L,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked more than 24 hours ago, and the airline has not cancelled the flight.",True
+midway_reason_b,48,0,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t cancel reservation 3RK2T9 or issue a full refund under the cancellation policy.,True
+midway_reason_b,48,0,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"Although you recall booking it this morning, the reservation records show May 2, 2024, at 06:02:56—outside the 24-hour cancellation window.",True
+midway_reason_b,48,0,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation conditions applies.",True
+midway_reason_b,48,0,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation conditions applies.",True
+midway_reason_b,48,0,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation conditions applies.",True
+midway_reason_b,48,0,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,48,1,cancel_3RK2T9,outcome,outcome,True,True,told,"I’m sorry, but I can’t cancel reservation 3RK2T9 or issue a refund under the cancellation policy.",True
+midway_reason_b,48,1,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"Although you recall booking this morning, the reservation record shows May 2, 2024, at 06:02:56—outside the 24-hour cancellation window.",True
+midway_reason_b,48,1,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation exceptions apply.",True
+midway_reason_b,48,1,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation exceptions apply.",True
+midway_reason_b,48,1,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight is cancelled by the airline, so none of the cancellation exceptions apply.",True
+midway_reason_b,48,1,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,48,2,cancel_3RK2T9,outcome,outcome,True,True,told,"I’m sorry, but I can’t cancel reservation 3RK2T9 or issue a refund under the cancellation policy.",True
+midway_reason_b,48,2,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"Although you recall booking this morning, the reservation shows it was created on May 2, 2024, outside the 24-hour cancellation window.",True
+midway_reason_b,48,2,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight has been cancelled by the airline, so none of the cancellation conditions apply.",True
+midway_reason_b,48,2,cancel_3RK2T9,insurance,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight has been cancelled by the airline, so none of the cancellation conditions apply.",True
+midway_reason_b,48,2,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy with no travel insurance, and neither flight has been cancelled by the airline, so none of the cancellation conditions apply.",True
+midway_reason_b,48,2,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,49,0,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t cancel or refund reservation 3RK2T9 under the cancellation policy.,True
+midway_reason_b,49,0,cancel_3RK2T9,insurance,element,True,True,conveyed,"Although you mentioned purchasing insurance, the booking record shows no travel insurance.",True
+midway_reason_b,49,0,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"It is basic economy, was booked on May 2—outside the 24-hour cancellation window—and neither flight has been cancelled by the airline.",True
+midway_reason_b,49,0,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy, was booked on May 2—outside the 24-hour cancellation window—and neither flight has been cancelled by the airline.",True
+midway_reason_b,49,0,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked on May 2—outside the 24-hour cancellation window—and neither flight has been cancelled by the airline.",True
+midway_reason_b,49,0,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,49,1,cancel_3RK2T9,outcome,outcome,True,True,told,I cannot approve a cancellation or refund based on the available records.,True
+midway_reason_b,49,1,cancel_3RK2T9,insurance,element,True,True,conveyed,"Although you mentioned purchasing insurance, the booking records show no travel insurance.",True
+midway_reason_b,49,1,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"It was booked on May 2, outside the 24-hour cancellation window",True
+midway_reason_b,49,1,cancel_3RK2T9,cabin,element,True,True,conveyed,is basic economy rather than business,True
+midway_reason_b,49,1,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,neither flight has been cancelled by the airline.,True
+midway_reason_b,49,1,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
+midway_reason_b,49,2,cancel_3RK2T9,outcome,outcome,True,True,told,I can’t cancel or refund reservation 3RK2T9 under the cancellation policy.,True
+midway_reason_b,49,2,cancel_3RK2T9,insurance,element,True,True,conveyed,"Although you mentioned purchasing insurance, the reservation shows no travel insurance.",True
+midway_reason_b,49,2,cancel_3RK2T9,booked_24h,element,True,True,conveyed,"It is basic economy, was booked on May 2 (more than 24 hours ago), and neither flight has been cancelled by the airline, so none of the cancellation eligibility conditions are met.",True
+midway_reason_b,49,2,cancel_3RK2T9,cabin,element,True,True,conveyed,"It is basic economy, was booked on May 2 (more than 24 hours ago), and neither flight has been cancelled by the airline, so none of the cancellation eligibility conditions are met.",True
+midway_reason_b,49,2,cancel_3RK2T9,airline_cancel,element,True,True,conveyed,"It is basic economy, was booked on May 2 (more than 24 hours ago), and neither flight has been cancelled by the airline, so none of the cancellation eligibility conditions are met.",True
+midway_reason_b,49,2,cancel_3RK2T9,accept_false_claim,must_not,True,True,kept,,
