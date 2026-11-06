@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 import time
 import uuid
@@ -460,6 +461,44 @@ def generate(
     raise AssertionError("response validation loop did not return or raise")
 
 
+# OpenRouter can rate limit an account per minute (for example new accounts).
+# litellm's own retries come too fast to outlast a one-minute window, and a
+# failure would make the runner restart the whole task. So a rate-limited call
+# waits until the window resets and sends the same request again. The request
+# is unchanged, so this affects only timing, never what the model sees.
+# Set TAU2_RATE_LIMIT_MAX_WAITS=0 to turn this off.
+RATE_LIMIT_MAX_WAITS = int(os.environ.get("TAU2_RATE_LIMIT_MAX_WAITS", "10"))
+RATE_LIMIT_DEFAULT_WAIT_SECONDS = 30.0
+RATE_LIMIT_MAX_WAIT_SECONDS = 120.0
+
+
+def _rate_limit_wait_seconds(error: Exception) -> float:
+    """Seconds until the rate limit window resets, from OpenRouter's error body."""
+    match = re.search(r'X-RateLimit-Reset"?\s*:\s*"?(\d{10,})', str(error))
+    if match:
+        wait = int(match.group(1)) / 1000 - time.time() + 1
+        if 0 < wait <= RATE_LIMIT_MAX_WAIT_SECONDS:
+            return wait
+    return RATE_LIMIT_DEFAULT_WAIT_SECONDS
+
+
+def _completion_with_rate_limit_wait(**kwargs: Any) -> ModelResponse:
+    """Call completion, waiting out per-minute rate limits instead of failing."""
+    for attempt in range(RATE_LIMIT_MAX_WAITS + 1):
+        try:
+            return completion(**kwargs)
+        except litellm.RateLimitError as e:
+            if attempt == RATE_LIMIT_MAX_WAITS:
+                raise
+            wait = _rate_limit_wait_seconds(e)
+            logger.warning(
+                f"Rate limited, waiting {wait:.0f}s before resending "
+                f"(wait {attempt + 1}/{RATE_LIMIT_MAX_WAITS})"
+            )
+            time.sleep(wait)
+    raise AssertionError("rate limit loop did not return or raise")
+
+
 def _generate_once(
     model: str,
     messages: list[Message],
@@ -509,7 +548,7 @@ def _generate_once(
 
     start_time = time.perf_counter()
     try:
-        response = completion(
+        response = _completion_with_rate_limit_wait(
             model=api_model,
             messages=litellm_messages,
             tools=tools_schema,
